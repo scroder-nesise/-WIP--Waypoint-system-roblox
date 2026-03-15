@@ -1,5 +1,5 @@
--- Waypoints System - Full Script
--- LocalScript inside StarterPlayer > StarterPlayerScripts
+-- Waypoints System v3 - Classic Roblox Retro Style + Draggable
+-- Paste this into a LocalScript inside StarterPlayer > StarterPlayerScripts
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -14,118 +14,171 @@ player.CharacterAdded:Connect(function(newChar)
 	rootPart = newChar:WaitForChild("HumanoidRootPart")
 end)
 
--- ScreenGui
+-- =============================================
+--  COLOUR PALETTE  (Classic Roblox retro look)
+-- =============================================
+local C = {
+	BG          = Color3.fromRGB(185, 172, 151),   -- warm grey-beige body
+	TITLE_BG    = Color3.fromRGB(41,  81, 164),    -- classic Roblox blue title bar
+	TITLE_TEXT  = Color3.fromRGB(255, 255, 255),
+	BORDER_DARK = Color3.fromRGB(100,  88,  68),
+	BORDER_LITE = Color3.fromRGB(220, 210, 195),
+	INSET_BG    = Color3.fromRGB(255, 255, 255),   -- white list area (classic dialog)
+	INSET_BORDER= Color3.fromRGB(128, 128, 128),
+	SEL_BG      = Color3.fromRGB(41,  81, 164),    -- selected row = title blue
+	SEL_TEXT    = Color3.fromRGB(255, 255, 255),
+	ROW_ALT     = Color3.fromRGB(240, 237, 230),
+	ROW_NORMAL  = Color3.fromRGB(255, 255, 255),
+	BTN_FACE    = Color3.fromRGB(212, 202, 185),   -- button face (raised)
+	BTN_SHADOW  = Color3.fromRGB(100,  88,  68),
+	BTN_HILIGHT = Color3.fromRGB(240, 232, 220),
+	TEXT_DARK   = Color3.fromRGB(30,  30,  30),
+	TEXT_MID    = Color3.fromRGB(90,  80,  65),
+	ACCENT_WP   = Color3.fromRGB(41,  81, 164),    -- waypoint disc colour
+	BTN_ADD     = Color3.fromRGB(66, 135,  66),    -- muted green
+	BTN_NAME    = Color3.fromRGB(164, 120,  41),   -- muted orange
+	BTN_TP      = Color3.fromRGB(88,  60, 160),    -- muted purple
+	BTN_DEL     = Color3.fromRGB(160,  55,  55),   -- muted red
+	CLOSE_FACE  = Color3.fromRGB(200,  60,  60),
+}
+
+-- =============================================
+--  HELPER: raised-border (classic Win95 look)
+-- =============================================
+-- Simulated with a UIStroke; 3-D bevel done via two thin border frames
+local function applyRaisedBorder(frame)
+	-- outer dark
+	local s = Instance.new("UIStroke")
+	s.Thickness = 2
+	s.Color = C.BORDER_DARK
+	s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	s.Parent = frame
+	return s
+end
+
+local function makeCorner(parent, radius)
+	local c = Instance.new("UICorner")
+	c.CornerRadius = UDim.new(0, radius or 0)
+	c.Parent = parent
+	return c
+end
+
+-- =============================================
+--  SCREEN GUI
+-- =============================================
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "WaypointSystem"
 screenGui.ResetOnSpawn = false
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 screenGui.Parent = player:WaitForChild("PlayerGui")
 
--- MAIN FRAME
+-- =============================================
+--  MAIN FRAME  (flat, square – retro dialog)
+-- =============================================
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 310, 0, 460)
-mainFrame.Position = UDim2.new(0.5, -155, 0.5, -230)
-mainFrame.BackgroundColor3 = Color3.fromRGB(180, 170, 150)
+mainFrame.Size = UDim2.new(0, 300, 0, 400)
+mainFrame.Position = UDim2.new(1, -320, 0.5, -200)
+mainFrame.BackgroundColor3 = C.BG
 mainFrame.BorderSizePixel = 0
 mainFrame.Parent = screenGui
+applyRaisedBorder(mainFrame)
 
-local mainStroke = Instance.new("UIStroke")
-mainStroke.Thickness = 3
-mainStroke.Color = Color3.fromRGB(100, 90, 75)
-mainStroke.Parent = mainFrame
+-- light hilight strip (top + left edge)
+local function addBevelStrip(parent, isTop)
+	local s = Instance.new("Frame")
+	s.BackgroundColor3 = C.BORDER_LITE
+	s.BorderSizePixel = 0
+	s.ZIndex = 2
+	if isTop then
+		s.Size = UDim2.new(1, 0, 0, 2)
+		s.Position = UDim2.new(0, 0, 0, 0)
+	else
+		s.Size = UDim2.new(0, 2, 1, 0)
+		s.Position = UDim2.new(0, 0, 0, 0)
+	end
+	s.Parent = parent
+end
+addBevelStrip(mainFrame, true)
+addBevelStrip(mainFrame, false)
 
-local innerBg = Instance.new("Frame")
-innerBg.Size = UDim2.new(1, -8, 1, -8)
-innerBg.Position = UDim2.new(0, 4, 0, 4)
-innerBg.BackgroundColor3 = Color3.fromRGB(200, 195, 175)
-innerBg.BorderSizePixel = 0
-innerBg.Parent = mainFrame
-
--- TITLE BAR
+-- =============================================
+--  TITLE BAR
+-- =============================================
 local titleBar = Instance.new("Frame")
-titleBar.Size = UDim2.new(1, 0, 0, 52)
-titleBar.Position = UDim2.new(0, 0, 0, 0)
-titleBar.BackgroundColor3 = Color3.fromRGB(25, 35, 140)
+titleBar.Size = UDim2.new(1, -8, 0, 28)
+titleBar.Position = UDim2.new(0, 4, 0, 4)
+titleBar.BackgroundColor3 = C.TITLE_BG
 titleBar.BorderSizePixel = 0
-titleBar.ZIndex = 2
-titleBar.Parent = innerBg
+titleBar.ZIndex = 3
+titleBar.Parent = mainFrame
 
-local pinIcon = Instance.new("TextLabel")
-pinIcon.Size = UDim2.new(0, 44, 1, 0)
-pinIcon.Position = UDim2.new(0, 6, 0, 0)
-pinIcon.BackgroundTransparency = 1
-pinIcon.Text = "📍"
-pinIcon.TextScaled = true
-pinIcon.Font = Enum.Font.GothamBlack
-pinIcon.ZIndex = 2
-pinIcon.Parent = titleBar
+-- Gradient on title bar (classic Roblox gradient)
+local grad = Instance.new("UIGradient")
+grad.Color = ColorSequence.new({
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(90, 130, 210)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(30, 65, 145)),
+})
+grad.Rotation = 90
+grad.Parent = titleBar
 
+-- Title icon + text
 local titleLabel = Instance.new("TextLabel")
-titleLabel.Size = UDim2.new(1, -90, 1, 0)
-titleLabel.Position = UDim2.new(0, 46, 0, 0)
+titleLabel.Size = UDim2.new(1, -36, 1, 0)
+titleLabel.Position = UDim2.new(0, 6, 0, 0)
 titleLabel.BackgroundTransparency = 1
-titleLabel.Text = "WAYPOINTS"
-titleLabel.TextColor3 = Color3.new(1, 1, 1)
+titleLabel.Text = "📍 WAYPOINTS"
+titleLabel.TextColor3 = C.TITLE_TEXT
 titleLabel.TextScaled = true
-titleLabel.Font = Enum.Font.GothamBlack
+titleLabel.Font = Enum.Font.Legacy        -- classic Roblox font
 titleLabel.TextXAlignment = Enum.TextXAlignment.Left
-titleLabel.ZIndex = 2
+titleLabel.ZIndex = 4
 titleLabel.Parent = titleBar
 
+-- Shadow under text for depth
+titleLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 80)
+titleLabel.TextStrokeTransparency = 0.5
+
+-- Close button (classic X)
 local closeBtn = Instance.new("TextButton")
-closeBtn.Size = UDim2.new(0, 36, 0, 36)
-closeBtn.Position = UDim2.new(1, -42, 0, 8)
-closeBtn.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
+closeBtn.Size = UDim2.new(0, 22, 0, 20)
+closeBtn.Position = UDim2.new(1, -25, 0, 4)
+closeBtn.BackgroundColor3 = C.CLOSE_FACE
 closeBtn.Text = "X"
 closeBtn.TextColor3 = Color3.new(1, 1, 1)
 closeBtn.TextScaled = true
-closeBtn.Font = Enum.Font.GothamBlack
-closeBtn.ZIndex = 10
+closeBtn.Font = Enum.Font.Legacy
+closeBtn.BorderSizePixel = 0
+closeBtn.ZIndex = 5
 closeBtn.Parent = titleBar
-
-local closeStroke = Instance.new("UIStroke")
-closeStroke.Thickness = 2
-closeStroke.Color = Color3.fromRGB(100, 20, 20)
-closeStroke.Parent = closeBtn
+applyRaisedBorder(closeBtn)
 
 closeBtn.MouseButton1Click:Connect(function()
 	screenGui:Destroy()
 end)
 
--- DRAG HANDLE (transparent button over title bar, below close button)
-local dragHandle = Instance.new("TextButton")
-dragHandle.Size = UDim2.new(1, -50, 1, 0)
-dragHandle.Position = UDim2.new(0, 0, 0, 0)
-dragHandle.BackgroundTransparency = 1
-dragHandle.Text = ""
-dragHandle.ZIndex = 9
-dragHandle.Parent = titleBar
-
--- DRAGGING LOGIC
+-- =============================================
+--  DRAGGABLE LOGIC  (drag by title bar)
+-- =============================================
 local dragging = false
-local dragStart
-local startPos
+local dragStart, startPos
 
-dragHandle.InputBegan:Connect(function(input)
+titleBar.InputBegan:Connect(function(input)
 	if input.UserInputType == Enum.UserInputType.MouseButton1
 		or input.UserInputType == Enum.UserInputType.Touch then
 		dragging = true
 		dragStart = input.Position
 		startPos = mainFrame.Position
-	end
-end)
-
-dragHandle.InputEnded:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1
-		or input.UserInputType == Enum.UserInputType.Touch then
-		dragging = false
+		input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End then
+				dragging = false
+			end
+		end)
 	end
 end)
 
 UserInputService.InputChanged:Connect(function(input)
-	if dragging and (
-		input.UserInputType == Enum.UserInputType.MouseMovement or
-		input.UserInputType == Enum.UserInputType.Touch
-	) then
+	if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement
+		or input.UserInputType == Enum.UserInputType.Touch) then
 		local delta = input.Position - dragStart
 		mainFrame.Position = UDim2.new(
 			startPos.X.Scale, startPos.X.Offset + delta.X,
@@ -134,125 +187,174 @@ UserInputService.InputChanged:Connect(function(input)
 	end
 end)
 
--- ACTION BUTTONS
+-- =============================================
+--  DIVIDER LINE below title
+-- =============================================
+local divider = Instance.new("Frame")
+divider.Size = UDim2.new(1, -8, 0, 2)
+divider.Position = UDim2.new(0, 4, 0, 36)
+divider.BackgroundColor3 = C.BORDER_DARK
+divider.BorderSizePixel = 0
+divider.Parent = mainFrame
+
+-- =============================================
+--  BUTTON ROW  (Add / Name / TP / Delete)
+-- =============================================
 local buttonsFrame = Instance.new("Frame")
-buttonsFrame.Size = UDim2.new(1, -12, 0, 56)
-buttonsFrame.Position = UDim2.new(0, 6, 0, 56)
+buttonsFrame.Size = UDim2.new(1, -12, 0, 34)
+buttonsFrame.Position = UDim2.new(0, 6, 0, 44)
 buttonsFrame.BackgroundTransparency = 1
-buttonsFrame.Parent = innerBg
+buttonsFrame.Parent = mainFrame
 
 local btnLayout = Instance.new("UIListLayout")
 btnLayout.FillDirection = Enum.FillDirection.Horizontal
 btnLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-btnLayout.VerticalAlignment = Enum.VerticalAlignment.Center
 btnLayout.Padding = UDim.new(0, 5)
 btnLayout.Parent = buttonsFrame
 
-local function makeButton(label, bg, borderColor)
+local function createRetroButton(text, faceColor)
 	local btn = Instance.new("TextButton")
-	btn.Size = UDim2.new(0, 66, 0, 46)
-	btn.BackgroundColor3 = bg
-	btn.Text = label
+	btn.Size = UDim2.new(0, 64, 1, 0)
+	btn.BackgroundColor3 = faceColor
+	btn.Text = text
 	btn.TextColor3 = Color3.new(1, 1, 1)
 	btn.TextScaled = true
-	btn.Font = Enum.Font.GothamBlack
+	btn.Font = Enum.Font.Legacy
+	btn.BorderSizePixel = 0
+	btn.AutoButtonColor = false
 	btn.Parent = buttonsFrame
 
-	local s = Instance.new("UIStroke")
-	s.Thickness = 2.5
-	s.Color = borderColor
-	s.Parent = btn
+	-- raised bevel
+	applyRaisedBorder(btn)
+
+	-- hover / press feedback
+	btn.MouseEnter:Connect(function()
+		btn.BackgroundColor3 = Color3.new(
+			math.min(faceColor.R + 0.12, 1),
+			math.min(faceColor.G + 0.12, 1),
+			math.min(faceColor.B + 0.12, 1)
+		)
+	end)
+	btn.MouseLeave:Connect(function()
+		btn.BackgroundColor3 = faceColor
+	end)
+	btn.MouseButton1Down:Connect(function()
+		btn.BackgroundColor3 = Color3.new(
+			math.max(faceColor.R - 0.1, 0),
+			math.max(faceColor.G - 0.1, 0),
+			math.max(faceColor.B - 0.1, 0)
+		)
+	end)
+	btn.MouseButton1Up:Connect(function()
+		btn.BackgroundColor3 = faceColor
+	end)
 
 	return btn
 end
 
-local addButton      = makeButton("ADD",    Color3.fromRGB(55, 150, 55),  Color3.fromRGB(30, 90, 30))
-local nameButton     = makeButton("NAME",   Color3.fromRGB(175, 130, 30), Color3.fromRGB(110, 80, 15))
-local teleportButton = makeButton("TP",     Color3.fromRGB(110, 50, 180), Color3.fromRGB(70, 25, 120))
-local deleteButton   = makeButton("DELETE", Color3.fromRGB(170, 55, 45),  Color3.fromRGB(110, 30, 25))
+local addButton      = createRetroButton("ADD",    C.BTN_ADD)
+local nameButton     = createRetroButton("NAME",   C.BTN_NAME)
+local teleportButton = createRetroButton("TP",     C.BTN_TP)
+local deleteButton   = createRetroButton("DELETE", C.BTN_DEL)
 
--- COLUMN HEADERS
+-- =============================================
+--  DIVIDER LINE below buttons
+-- =============================================
+local divider2 = Instance.new("Frame")
+divider2.Size = UDim2.new(1, -8, 0, 2)
+divider2.Position = UDim2.new(0, 4, 0, 84)
+divider2.BackgroundColor3 = C.BORDER_DARK
+divider2.BorderSizePixel = 0
+divider2.Parent = mainFrame
+
+-- Column header bar
 local headerBar = Instance.new("Frame")
-headerBar.Size = UDim2.new(1, -12, 0, 28)
-headerBar.Position = UDim2.new(0, 6, 0, 116)
-headerBar.BackgroundColor3 = Color3.fromRGB(25, 35, 140)
+headerBar.Size = UDim2.new(1, -12, 0, 18)
+headerBar.Position = UDim2.new(0, 6, 0, 90)
+headerBar.BackgroundColor3 = C.TITLE_BG
 headerBar.BorderSizePixel = 0
-headerBar.Parent = innerBg
+headerBar.Parent = mainFrame
 
-local headerStroke = Instance.new("UIStroke")
-headerStroke.Thickness = 2
-headerStroke.Color = Color3.fromRGB(15, 20, 100)
-headerStroke.Parent = headerBar
+local hGrad = Instance.new("UIGradient")
+hGrad.Color = ColorSequence.new({
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(90, 130, 210)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(30, 65, 145)),
+})
+hGrad.Rotation = 90
+hGrad.Parent = headerBar
 
-local nameHeader = Instance.new("TextLabel")
-nameHeader.Size = UDim2.new(0.5, 0, 1, 0)
-nameHeader.Position = UDim2.new(0, 8, 0, 0)
-nameHeader.BackgroundTransparency = 1
-nameHeader.Text = "NAME"
-nameHeader.TextColor3 = Color3.new(1, 1, 1)
-nameHeader.TextScaled = true
-nameHeader.Font = Enum.Font.GothamBlack
-nameHeader.TextXAlignment = Enum.TextXAlignment.Left
-nameHeader.Parent = headerBar
+local hName = Instance.new("TextLabel")
+hName.Size = UDim2.new(0.55, 0, 1, 0)
+hName.Position = UDim2.new(0, 4, 0, 0)
+hName.BackgroundTransparency = 1
+hName.Text = "NAME"
+hName.TextColor3 = Color3.new(1, 1, 1)
+hName.TextScaled = true
+hName.Font = Enum.Font.Legacy
+hName.TextXAlignment = Enum.TextXAlignment.Left
+hName.Parent = headerBar
 
-local distHeader = Instance.new("TextLabel")
-distHeader.Size = UDim2.new(0.5, -8, 1, 0)
-distHeader.Position = UDim2.new(0.5, 0, 0, 0)
-distHeader.BackgroundTransparency = 1
-distHeader.Text = "DISTANCE"
-distHeader.TextColor3 = Color3.new(1, 1, 1)
-distHeader.TextScaled = true
-distHeader.Font = Enum.Font.GothamBlack
-distHeader.TextXAlignment = Enum.TextXAlignment.Right
-distHeader.Parent = headerBar
+local hDist = Instance.new("TextLabel")
+hDist.Size = UDim2.new(0.45, -4, 1, 0)
+hDist.Position = UDim2.new(0.55, 0, 0, 0)
+hDist.BackgroundTransparency = 1
+hDist.Text = "DISTANCE"
+hDist.TextColor3 = Color3.new(1, 1, 1)
+hDist.TextScaled = true
+hDist.Font = Enum.Font.Legacy
+hDist.TextXAlignment = Enum.TextXAlignment.Right
+hDist.Parent = headerBar
 
--- SCROLLING LIST
+-- =============================================
+--  SCROLLING LIST  (white inset box)
+-- =============================================
 local listFrame = Instance.new("ScrollingFrame")
-listFrame.Size = UDim2.new(1, -12, 1, -202)
-listFrame.Position = UDim2.new(0, 6, 0, 148)
-listFrame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-listFrame.ScrollBarThickness = 6
-listFrame.ScrollBarImageColor3 = Color3.fromRGB(25, 35, 140)
+listFrame.Size = UDim2.new(1, -12, 1, -156)
+listFrame.Position = UDim2.new(0, 6, 0, 112)
+listFrame.BackgroundColor3 = C.INSET_BG
+listFrame.ScrollBarThickness = 10
+listFrame.ScrollBarImageColor3 = C.BORDER_DARK
 listFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
 listFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
 listFrame.BorderSizePixel = 0
-listFrame.Parent = innerBg
+listFrame.Parent = mainFrame
 
-local listStroke = Instance.new("UIStroke")
-listStroke.Thickness = 2
-listStroke.Color = Color3.fromRGB(120, 110, 90)
-listStroke.Parent = listFrame
+local insetStroke = Instance.new("UIStroke")
+insetStroke.Thickness = 2
+insetStroke.Color = C.INSET_BORDER
+insetStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+insetStroke.Parent = listFrame
 
 local listLayout = Instance.new("UIListLayout")
 listLayout.Padding = UDim.new(0, 0)
 listLayout.SortOrder = Enum.SortOrder.LayoutOrder
 listLayout.Parent = listFrame
 
--- STATUS BAR
+-- =============================================
+--  STATUS BAR at bottom
+-- =============================================
 local statusBar = Instance.new("Frame")
-statusBar.Size = UDim2.new(1, -12, 0, 32)
-statusBar.Position = UDim2.new(0, 6, 1, -38)
-statusBar.BackgroundColor3 = Color3.fromRGB(230, 225, 205)
+statusBar.Size = UDim2.new(1, -8, 0, 20)
+statusBar.Position = UDim2.new(0, 4, 1, -24)
+statusBar.BackgroundColor3 = C.BG
 statusBar.BorderSizePixel = 0
-statusBar.Parent = innerBg
-
-local statusStroke = Instance.new("UIStroke")
-statusStroke.Thickness = 2
-statusStroke.Color = Color3.fromRGB(120, 110, 90)
-statusStroke.Parent = statusBar
+statusBar.Parent = mainFrame
+applyRaisedBorder(statusBar)
 
 local statusLabel = Instance.new("TextLabel")
-statusLabel.Size = UDim2.new(1, -10, 1, 0)
-statusLabel.Position = UDim2.new(0, 6, 0, 0)
+statusLabel.Size = UDim2.new(1, -8, 1, 0)
+statusLabel.Position = UDim2.new(0, 4, 0, 0)
 statusLabel.BackgroundTransparency = 1
-statusLabel.Text = "No waypoints. Press ADD to create one."
-statusLabel.TextColor3 = Color3.fromRGB(50, 50, 50)
+statusLabel.Text = "No waypoint selected."
+statusLabel.TextColor3 = C.TEXT_DARK
 statusLabel.TextScaled = true
-statusLabel.Font = Enum.Font.Gotham
+statusLabel.Font = Enum.Font.Legacy
 statusLabel.TextXAlignment = Enum.TextXAlignment.Left
 statusLabel.Parent = statusBar
 
--- WAYPOINT DATA
+-- =============================================
+--  DATA & STATE
+-- =============================================
 local waypoints = {}
 local selectedWaypoint = nil
 
@@ -260,20 +362,22 @@ local function setStatus(msg)
 	statusLabel.Text = msg
 end
 
--- World marker
-local function createMarker(wp)
+-- =============================================
+--  WORLD MARKER
+-- =============================================
+local function createMarker(waypointData)
 	local part = Instance.new("Part")
 	part.Name = "WaypointMarker"
 	part.Shape = Enum.PartType.Cylinder
 	part.Size = Vector3.new(6, 0.25, 6)
-	part.Position = wp.position + Vector3.new(0, 0.15, 0)
+	part.Position = waypointData.position + Vector3.new(0, 0.15, 0)
 	part.Anchored = true
 	part.CanCollide = false
 	part.Transparency = 0.35
-	part.Color = Color3.fromRGB(0, 200, 255)
+	part.Color = C.ACCENT_WP
 	part.Parent = workspace
 
-	wp.marker = part
+	waypointData.marker = part
 
 	local billboard = Instance.new("BillboardGui")
 	billboard.Adornee = part
@@ -283,96 +387,107 @@ local function createMarker(wp)
 	billboard.LightInfluence = 0
 	billboard.Parent = part
 
-	local lbl = Instance.new("TextLabel")
-	lbl.Size = UDim2.new(1, 0, 1, 0)
-	lbl.BackgroundTransparency = 1
-	lbl.Text = wp.name
-	lbl.TextColor3 = Color3.new(1, 1, 1)
-	lbl.TextStrokeTransparency = 0.3
-	lbl.TextScaled = true
-	lbl.Font = Enum.Font.GothamBold
-	lbl.Parent = billboard
+	local nameLabel = Instance.new("TextLabel")
+	nameLabel.Size = UDim2.new(1, 0, 1, 0)
+	nameLabel.BackgroundTransparency = 1
+	nameLabel.Text = waypointData.name
+	nameLabel.TextColor3 = Color3.new(1, 1, 1)
+	nameLabel.TextStrokeTransparency = 0.2
+	nameLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 80)
+	nameLabel.TextScaled = true
+	nameLabel.Font = Enum.Font.Legacy
+	nameLabel.Parent = billboard
 end
 
--- Refresh list
+-- =============================================
+--  REFRESH LIST UI
+-- =============================================
 local function refreshList()
 	for _, child in ipairs(listFrame:GetChildren()) do
 		if child:IsA("Frame") then child:Destroy() end
 	end
 
-	if #waypoints == 0 then
-		setStatus("No waypoints. Press ADD to create one.")
-		return
-	end
-
-	setStatus(selectedWaypoint
-		and ('Selected: "' .. selectedWaypoint.name .. '"')
-		or "Click a waypoint to select it.")
-
 	for i, wp in ipairs(waypoints) do
 		local isSelected = (wp == selectedWaypoint)
+		local isAlt = (i % 2 == 0)
 
-		local row = Instance.new("Frame")
-		row.Size = UDim2.new(1, 0, 0, 38)
-		row.LayoutOrder = i
-		row.BackgroundColor3 = isSelected
-			and Color3.fromRGB(25, 35, 140)
-			or (i % 2 == 0 and Color3.fromRGB(240, 238, 228) or Color3.fromRGB(255, 255, 255))
-		row.BorderSizePixel = 0
-		row.Parent = listFrame
+		local entry = Instance.new("Frame")
+		entry.Size = UDim2.new(1, 0, 0, 24)
+		entry.BackgroundColor3 = isSelected and C.SEL_BG
+			or (isAlt and C.ROW_ALT or C.ROW_NORMAL)
+		entry.BorderSizePixel = 0
+		entry.LayoutOrder = i
+		entry.Parent = listFrame
 
-		local divider = Instance.new("Frame")
-		divider.Size = UDim2.new(1, 0, 0, 1)
-		divider.Position = UDim2.new(0, 0, 1, -1)
-		divider.BackgroundColor3 = Color3.fromRGB(180, 175, 155)
-		divider.BorderSizePixel = 0
-		divider.Parent = row
+		-- bottom 1px separator
+		local sep = Instance.new("Frame")
+		sep.Size = UDim2.new(1, 0, 0, 1)
+		sep.Position = UDim2.new(0, 0, 1, -1)
+		sep.BackgroundColor3 = Color3.fromRGB(210, 205, 195)
+		sep.BorderSizePixel = 0
+		sep.Parent = entry
 
+		-- Tiny flag icon label
+		local icon = Instance.new("TextLabel")
+		icon.Size = UDim2.new(0, 20, 1, 0)
+		icon.Position = UDim2.new(0, 2, 0, 0)
+		icon.BackgroundTransparency = 1
+		icon.Text = "📍"
+		icon.TextScaled = true
+		icon.Font = Enum.Font.Legacy
+		icon.Parent = entry
+
+		-- Name
 		local nameLabel = Instance.new("TextLabel")
-		nameLabel.Size = UDim2.new(0.55, -8, 1, 0)
-		nameLabel.Position = UDim2.new(0, 8, 0, 0)
+		nameLabel.Size = UDim2.new(0.55, -24, 1, 0)
+		nameLabel.Position = UDim2.new(0, 24, 0, 0)
 		nameLabel.BackgroundTransparency = 1
 		nameLabel.Text = wp.name
-		nameLabel.TextColor3 = isSelected and Color3.new(1,1,1) or Color3.fromRGB(30, 30, 30)
+		nameLabel.TextColor3 = isSelected and C.SEL_TEXT or C.TEXT_DARK
 		nameLabel.TextXAlignment = Enum.TextXAlignment.Left
 		nameLabel.TextScaled = true
-		nameLabel.Font = isSelected and Enum.Font.GothamBold or Enum.Font.Gotham
-		nameLabel.Parent = row
+		nameLabel.Font = Enum.Font.Legacy
+		nameLabel.Parent = entry
 
+		-- Live distance
 		local distLabel = Instance.new("TextLabel")
 		distLabel.Name = "DistanceLabel"
-		distLabel.Size = UDim2.new(0.45, -8, 1, 0)
+		distLabel.Size = UDim2.new(0.45, -6, 1, 0)
 		distLabel.Position = UDim2.new(0.55, 0, 0, 0)
 		distLabel.BackgroundTransparency = 1
 		distLabel.Text = "— studs"
-		distLabel.TextColor3 = isSelected and Color3.fromRGB(200, 200, 255) or Color3.fromRGB(80, 80, 80)
+		distLabel.TextColor3 = isSelected and C.SEL_TEXT or C.TEXT_MID
 		distLabel.TextXAlignment = Enum.TextXAlignment.Right
 		distLabel.TextScaled = true
-		distLabel.Font = Enum.Font.Gotham
-		distLabel.Parent = row
+		distLabel.Font = Enum.Font.Legacy
+		distLabel.Parent = entry
 
-		local vDivider = Instance.new("Frame")
-		vDivider.Size = UDim2.new(0, 1, 0.7, 0)
-		vDivider.Position = UDim2.new(0.55, 0, 0.15, 0)
-		vDivider.BackgroundColor3 = isSelected and Color3.fromRGB(80, 90, 180) or Color3.fromRGB(180, 175, 155)
-		vDivider.BorderSizePixel = 0
-		vDivider.Parent = row
-
+		-- Invisible click catcher
 		local clickBtn = Instance.new("TextButton")
 		clickBtn.Size = UDim2.new(1, 0, 1, 0)
 		clickBtn.BackgroundTransparency = 1
 		clickBtn.Text = ""
-		clickBtn.Parent = row
+		clickBtn.ZIndex = 2
+		clickBtn.Parent = entry
 		clickBtn.MouseButton1Click:Connect(function()
 			selectedWaypoint = wp
+			setStatus("Selected: " .. wp.name)
 			refreshList()
 		end)
 
-		wp.guiEntry = row
+		wp.guiEntry = entry
+	end
+
+	if #waypoints == 0 then
+		setStatus("No waypoints. Press ADD to create one.")
+	elseif not selectedWaypoint then
+		setStatus(#waypoints .. " waypoint(s). Click one to select.")
 	end
 end
 
--- Live distance updater
+-- =============================================
+--  LIVE DISTANCE UPDATER
+-- =============================================
 RunService.Heartbeat:Connect(function()
 	if not rootPart then return end
 	local playerPos = rootPart.Position
@@ -380,113 +495,150 @@ RunService.Heartbeat:Connect(function()
 		if wp.guiEntry then
 			local d = wp.guiEntry:FindFirstChild("DistanceLabel")
 			if d then
-				d.Text = math.floor((playerPos - wp.position).Magnitude + 0.5) .. " studs"
+				local dist = math.floor((playerPos - wp.position).Magnitude + 0.5)
+				d.Text = dist .. " studs"
 			end
 		end
 	end
 end)
 
--- ADD
+-- =============================================
+--  ADD WAYPOINT
+-- =============================================
 addButton.MouseButton1Click:Connect(function()
 	if not rootPart then return end
 	local newWP = {
 		name = "Waypoint " .. (#waypoints + 1),
 		position = rootPart.Position,
 		marker = nil,
-		guiEntry = nil
+		guiEntry = nil,
 	}
 	table.insert(waypoints, newWP)
 	createMarker(newWP)
-	selectedWaypoint = newWP
+	setStatus("Added: " .. newWP.name)
 	refreshList()
 end)
 
--- NAME / RENAME
+-- =============================================
+--  RENAME DIALOG  (retro modal)
+-- =============================================
 nameButton.MouseButton1Click:Connect(function()
 	if not selectedWaypoint then
 		setStatus("Select a waypoint first!")
 		return
 	end
 
-	local popup = Instance.new("Frame")
-	popup.Size = UDim2.new(0, 280, 0, 140)
-	popup.Position = UDim2.new(0.5, -140, 0.5, -70)
-	popup.BackgroundColor3 = Color3.fromRGB(200, 195, 175)
-	popup.BorderSizePixel = 0
-	popup.ZIndex = 10
-	popup.Parent = screenGui
+	-- Dim overlay
+	local overlay = Instance.new("Frame")
+	overlay.Size = UDim2.new(1, 0, 1, 0)
+	overlay.BackgroundColor3 = Color3.new(0, 0, 0)
+	overlay.BackgroundTransparency = 0.55
+	overlay.BorderSizePixel = 0
+	overlay.ZIndex = 10
+	overlay.Parent = screenGui
 
-	local popStroke = Instance.new("UIStroke")
-	popStroke.Thickness = 3
-	popStroke.Color = Color3.fromRGB(100, 90, 75)
-	popStroke.Parent = popup
+	-- Dialog box
+	local dialog = Instance.new("Frame")
+	dialog.Size = UDim2.new(0, 280, 0, 140)
+	dialog.Position = UDim2.new(0.5, -140, 0.5, -70)
+	dialog.BackgroundColor3 = C.BG
+	dialog.BorderSizePixel = 0
+	dialog.ZIndex = 11
+	dialog.Parent = screenGui
+	applyRaisedBorder(dialog)
+	addBevelStrip(dialog, true)
+	addBevelStrip(dialog, false)
 
-	local popHeader = Instance.new("Frame")
-	popHeader.Size = UDim2.new(1, 0, 0, 36)
-	popHeader.BackgroundColor3 = Color3.fromRGB(25, 35, 140)
-	popHeader.BorderSizePixel = 0
-	popHeader.ZIndex = 10
-	popHeader.Parent = popup
+	-- Dialog title bar
+	local dTitle = Instance.new("Frame")
+	dTitle.Size = UDim2.new(1, -8, 0, 22)
+	dTitle.Position = UDim2.new(0, 4, 0, 4)
+	dTitle.BackgroundColor3 = C.TITLE_BG
+	dTitle.BorderSizePixel = 0
+	dTitle.ZIndex = 12
+	dTitle.Parent = dialog
 
-	local popTitle = Instance.new("TextLabel")
-	popTitle.Size = UDim2.new(1, 0, 1, 0)
-	popTitle.BackgroundTransparency = 1
-	popTitle.Text = "RENAME WAYPOINT"
-	popTitle.TextColor3 = Color3.new(1, 1, 1)
-	popTitle.TextScaled = true
-	popTitle.Font = Enum.Font.GothamBlack
-	popTitle.ZIndex = 10
-	popTitle.Parent = popHeader
+	local dGrad = Instance.new("UIGradient")
+	dGrad.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, Color3.fromRGB(90, 130, 210)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(30, 65, 145)),
+	})
+	dGrad.Rotation = 90
+	dGrad.Parent = dTitle
 
+	local dTitleLbl = Instance.new("TextLabel")
+	dTitleLbl.Size = UDim2.new(1, -6, 1, 0)
+	dTitleLbl.Position = UDim2.new(0, 6, 0, 0)
+	dTitleLbl.BackgroundTransparency = 1
+	dTitleLbl.Text = "Rename Waypoint"
+	dTitleLbl.TextColor3 = Color3.new(1, 1, 1)
+	dTitleLbl.TextScaled = true
+	dTitleLbl.Font = Enum.Font.Legacy
+	dTitleLbl.TextXAlignment = Enum.TextXAlignment.Left
+	dTitleLbl.ZIndex = 13
+	dTitleLbl.Parent = dTitle
+
+	-- Label
+	local promptLbl = Instance.new("TextLabel")
+	promptLbl.Size = UDim2.new(1, -12, 0, 20)
+	promptLbl.Position = UDim2.new(0, 6, 0, 32)
+	promptLbl.BackgroundTransparency = 1
+	promptLbl.Text = "Enter new name:"
+	promptLbl.TextColor3 = C.TEXT_DARK
+	promptLbl.TextScaled = true
+	promptLbl.Font = Enum.Font.Legacy
+	promptLbl.TextXAlignment = Enum.TextXAlignment.Left
+	promptLbl.ZIndex = 12
+	promptLbl.Parent = dialog
+
+	-- Text box (white inset)
 	local textBox = Instance.new("TextBox")
-	textBox.Size = UDim2.new(1, -20, 0, 36)
-	textBox.Position = UDim2.new(0, 10, 0, 44)
+	textBox.Size = UDim2.new(1, -12, 0, 26)
+	textBox.Position = UDim2.new(0, 6, 0, 56)
 	textBox.BackgroundColor3 = Color3.new(1, 1, 1)
 	textBox.Text = selectedWaypoint.name
-	textBox.TextScaled = true
-	textBox.Font = Enum.Font.Gotham
 	textBox.ClearTextOnFocus = true
-	textBox.ZIndex = 10
-	textBox.Parent = popup
+	textBox.PlaceholderText = "Enter name..."
+	textBox.TextScaled = true
+	textBox.Font = Enum.Font.Legacy
+	textBox.TextColor3 = C.TEXT_DARK
+	textBox.ZIndex = 12
+	textBox.Parent = dialog
+	applyRaisedBorder(textBox)
 
-	local tStroke = Instance.new("UIStroke")
-	tStroke.Thickness = 2
-	tStroke.Color = Color3.fromRGB(100, 90, 75)
-	tStroke.Parent = textBox
-
-	local saveBtn = Instance.new("TextButton")
-	saveBtn.Size = UDim2.new(0.46, 0, 0, 32)
-	saveBtn.Position = UDim2.new(0.04, 0, 1, -42)
-	saveBtn.BackgroundColor3 = Color3.fromRGB(55, 150, 55)
-	saveBtn.Text = "SAVE"
-	saveBtn.TextColor3 = Color3.new(1, 1, 1)
-	saveBtn.TextScaled = true
-	saveBtn.Font = Enum.Font.GothamBlack
-	saveBtn.ZIndex = 10
-	saveBtn.Parent = popup
-
-	local sSt = Instance.new("UIStroke")
-	sSt.Thickness = 2
-	sSt.Color = Color3.fromRGB(30, 90, 30)
-	sSt.Parent = saveBtn
+	-- OK / Cancel buttons
+	local okBtn = Instance.new("TextButton")
+	okBtn.Size = UDim2.new(0, 80, 0, 26)
+	okBtn.Position = UDim2.new(0.5, -86, 0, 100)
+	okBtn.BackgroundColor3 = C.BTN_FACE
+	okBtn.Text = "OK"
+	okBtn.TextColor3 = C.TEXT_DARK
+	okBtn.TextScaled = true
+	okBtn.Font = Enum.Font.Legacy
+	okBtn.BorderSizePixel = 0
+	okBtn.ZIndex = 12
+	okBtn.Parent = dialog
+	applyRaisedBorder(okBtn)
 
 	local cancelBtn = Instance.new("TextButton")
-	cancelBtn.Size = UDim2.new(0.46, 0, 0, 32)
-	cancelBtn.Position = UDim2.new(0.5, 0, 1, -42)
-	cancelBtn.BackgroundColor3 = Color3.fromRGB(170, 55, 45)
-	cancelBtn.Text = "CANCEL"
-	cancelBtn.TextColor3 = Color3.new(1, 1, 1)
+	cancelBtn.Size = UDim2.new(0, 80, 0, 26)
+	cancelBtn.Position = UDim2.new(0.5, 6, 0, 100)
+	cancelBtn.BackgroundColor3 = C.BTN_FACE
+	cancelBtn.Text = "Cancel"
+	cancelBtn.TextColor3 = C.TEXT_DARK
 	cancelBtn.TextScaled = true
-	cancelBtn.Font = Enum.Font.GothamBlack
-	cancelBtn.ZIndex = 10
-	cancelBtn.Parent = popup
+	cancelBtn.Font = Enum.Font.Legacy
+	cancelBtn.BorderSizePixel = 0
+	cancelBtn.ZIndex = 12
+	cancelBtn.Parent = dialog
+	applyRaisedBorder(cancelBtn)
 
-	local cSt = Instance.new("UIStroke")
-	cSt.Thickness = 2
-	cSt.Color = Color3.fromRGB(110, 30, 25)
-	cSt.Parent = cancelBtn
+	local function closeDialog()
+		overlay:Destroy()
+		dialog:Destroy()
+	end
 
-	saveBtn.MouseButton1Click:Connect(function()
+	okBtn.MouseButton1Click:Connect(function()
 		if textBox.Text ~= "" then
 			selectedWaypoint.name = textBox.Text
 			if selectedWaypoint.marker then
@@ -496,37 +648,44 @@ nameButton.MouseButton1Click:Connect(function()
 					if lbl then lbl.Text = selectedWaypoint.name end
 				end
 			end
+			setStatus("Renamed to: " .. selectedWaypoint.name)
 		end
-		popup:Destroy()
+		closeDialog()
 		refreshList()
 	end)
 
-	cancelBtn.MouseButton1Click:Connect(function()
-		popup:Destroy()
-	end)
-
+	cancelBtn.MouseButton1Click:Connect(closeDialog)
 	textBox:CaptureFocus()
 end)
 
--- TELEPORT
+-- =============================================
+--  TELEPORT
+-- =============================================
 teleportButton.MouseButton1Click:Connect(function()
 	if not selectedWaypoint or not rootPart then
 		setStatus("Select a waypoint to teleport!")
 		return
 	end
 	rootPart.CFrame = CFrame.new(selectedWaypoint.position + Vector3.new(0, 5, 0))
-	local hum = character:FindFirstChildOfClass("Humanoid")
-	if hum then hum:ChangeState(Enum.HumanoidStateType.RunningNoPhysics) end
-	setStatus('Teleported to "' .. selectedWaypoint.name .. '"')
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	if humanoid then
+		humanoid:ChangeState(Enum.HumanoidStateType.RunningNoPhysics)
+	end
+	setStatus("Teleported to: " .. selectedWaypoint.name)
 end)
 
--- DELETE
+-- =============================================
+--  DELETE
+-- =============================================
 deleteButton.MouseButton1Click:Connect(function()
 	if not selectedWaypoint then
 		setStatus("Select a waypoint to delete!")
 		return
 	end
-	if selectedWaypoint.marker then selectedWaypoint.marker:Destroy() end
+	local deletedName = selectedWaypoint.name
+	if selectedWaypoint.marker then
+		selectedWaypoint.marker:Destroy()
+	end
 	for i, wp in ipairs(waypoints) do
 		if wp == selectedWaypoint then
 			table.remove(waypoints, i)
@@ -534,8 +693,11 @@ deleteButton.MouseButton1Click:Connect(function()
 		end
 	end
 	selectedWaypoint = nil
+	setStatus("Deleted: " .. deletedName)
 	refreshList()
 end)
 
--- Init
+-- =============================================
+--  INITIAL RENDER
+-- =============================================
 refreshList()
