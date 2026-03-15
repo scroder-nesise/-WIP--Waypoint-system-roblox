@@ -1,4 +1,4 @@
--- Waypoints System - Styled to match reference UI
+-- Waypoints System - Full Script
 -- LocalScript inside StarterPlayer > StarterPlayerScripts
 
 local Players = game:GetService("Players")
@@ -20,11 +20,11 @@ screenGui.Name = "WaypointSystem"
 screenGui.ResetOnSpawn = false
 screenGui.Parent = player:WaitForChild("PlayerGui")
 
--- ── MAIN FRAME ──────────────────────────────────────────────
+-- MAIN FRAME
 local mainFrame = Instance.new("Frame")
 mainFrame.Size = UDim2.new(0, 310, 0, 460)
 mainFrame.Position = UDim2.new(0.5, -155, 0.5, -230)
-mainFrame.BackgroundColor3 = Color3.fromRGB(180, 170, 150)  -- tan/beige border
+mainFrame.BackgroundColor3 = Color3.fromRGB(180, 170, 150)
 mainFrame.BorderSizePixel = 0
 mainFrame.Parent = screenGui
 
@@ -33,7 +33,6 @@ mainStroke.Thickness = 3
 mainStroke.Color = Color3.fromRGB(100, 90, 75)
 mainStroke.Parent = mainFrame
 
--- Inner content background
 local innerBg = Instance.new("Frame")
 innerBg.Size = UDim2.new(1, -8, 1, -8)
 innerBg.Position = UDim2.new(0, 4, 0, 4)
@@ -41,15 +40,15 @@ innerBg.BackgroundColor3 = Color3.fromRGB(200, 195, 175)
 innerBg.BorderSizePixel = 0
 innerBg.Parent = mainFrame
 
--- ── TITLE BAR ───────────────────────────────────────────────
+-- TITLE BAR
 local titleBar = Instance.new("Frame")
 titleBar.Size = UDim2.new(1, 0, 0, 52)
 titleBar.Position = UDim2.new(0, 0, 0, 0)
-titleBar.BackgroundColor3 = Color3.fromRGB(25, 35, 140)   -- deep navy blue
+titleBar.BackgroundColor3 = Color3.fromRGB(25, 35, 140)
 titleBar.BorderSizePixel = 0
+titleBar.ZIndex = 2
 titleBar.Parent = innerBg
 
--- Pin icon label
 local pinIcon = Instance.new("TextLabel")
 pinIcon.Size = UDim2.new(0, 44, 1, 0)
 pinIcon.Position = UDim2.new(0, 6, 0, 0)
@@ -57,9 +56,9 @@ pinIcon.BackgroundTransparency = 1
 pinIcon.Text = "📍"
 pinIcon.TextScaled = true
 pinIcon.Font = Enum.Font.GothamBlack
+pinIcon.ZIndex = 2
 pinIcon.Parent = titleBar
 
--- Title text
 local titleLabel = Instance.new("TextLabel")
 titleLabel.Size = UDim2.new(1, -90, 1, 0)
 titleLabel.Position = UDim2.new(0, 46, 0, 0)
@@ -69,9 +68,9 @@ titleLabel.TextColor3 = Color3.new(1, 1, 1)
 titleLabel.TextScaled = true
 titleLabel.Font = Enum.Font.GothamBlack
 titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+titleLabel.ZIndex = 2
 titleLabel.Parent = titleBar
 
--- Close Button (red X)
 local closeBtn = Instance.new("TextButton")
 closeBtn.Size = UDim2.new(0, 36, 0, 36)
 closeBtn.Position = UDim2.new(1, -42, 0, 8)
@@ -80,6 +79,7 @@ closeBtn.Text = "X"
 closeBtn.TextColor3 = Color3.new(1, 1, 1)
 closeBtn.TextScaled = true
 closeBtn.Font = Enum.Font.GothamBlack
+closeBtn.ZIndex = 10
 closeBtn.Parent = titleBar
 
 local closeStroke = Instance.new("UIStroke")
@@ -91,27 +91,41 @@ closeBtn.MouseButton1Click:Connect(function()
 	screenGui:Destroy()
 end)
 
--- ── DRAGGING ────────────────────────────────────────────────
+-- DRAG HANDLE (transparent button over title bar, below close button)
+local dragHandle = Instance.new("TextButton")
+dragHandle.Size = UDim2.new(1, -50, 1, 0)
+dragHandle.Position = UDim2.new(0, 0, 0, 0)
+dragHandle.BackgroundTransparency = 1
+dragHandle.Text = ""
+dragHandle.ZIndex = 9
+dragHandle.Parent = titleBar
+
+-- DRAGGING LOGIC
 local dragging = false
 local dragStart
 local startPos
 
-titleBar.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+dragHandle.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1
+		or input.UserInputType == Enum.UserInputType.Touch then
 		dragging = true
 		dragStart = input.Position
 		startPos = mainFrame.Position
 	end
 end)
 
-titleBar.InputEnded:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+dragHandle.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1
+		or input.UserInputType == Enum.UserInputType.Touch then
 		dragging = false
 	end
 end)
 
 UserInputService.InputChanged:Connect(function(input)
-	if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+	if dragging and (
+		input.UserInputType == Enum.UserInputType.MouseMovement or
+		input.UserInputType == Enum.UserInputType.Touch
+	) then
 		local delta = input.Position - dragStart
 		mainFrame.Position = UDim2.new(
 			startPos.X.Scale, startPos.X.Offset + delta.X,
@@ -120,7 +134,7 @@ UserInputService.InputChanged:Connect(function(input)
 	end
 end)
 
--- ── ACTION BUTTONS ──────────────────────────────────────────
+-- ACTION BUTTONS
 local buttonsFrame = Instance.new("Frame")
 buttonsFrame.Size = UDim2.new(1, -12, 0, 56)
 buttonsFrame.Position = UDim2.new(0, 6, 0, 56)
@@ -130,8 +144,8 @@ buttonsFrame.Parent = innerBg
 local btnLayout = Instance.new("UIListLayout")
 btnLayout.FillDirection = Enum.FillDirection.Horizontal
 btnLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-btnLayout.Padding = UDim.new(0, 5)
 btnLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+btnLayout.Padding = UDim.new(0, 5)
 btnLayout.Parent = buttonsFrame
 
 local function makeButton(label, bg, borderColor)
@@ -152,12 +166,12 @@ local function makeButton(label, bg, borderColor)
 	return btn
 end
 
-local addButton      = makeButton("ADD",    Color3.fromRGB(55, 150, 55),   Color3.fromRGB(30, 90, 30))
-local nameButton     = makeButton("NAME",   Color3.fromRGB(175, 130, 30),  Color3.fromRGB(110, 80, 15))
-local teleportButton = makeButton("TP",     Color3.fromRGB(110, 50, 180),  Color3.fromRGB(70, 25, 120))
-local deleteButton   = makeButton("DELETE", Color3.fromRGB(170, 55, 45),   Color3.fromRGB(110, 30, 25))
+local addButton      = makeButton("ADD",    Color3.fromRGB(55, 150, 55),  Color3.fromRGB(30, 90, 30))
+local nameButton     = makeButton("NAME",   Color3.fromRGB(175, 130, 30), Color3.fromRGB(110, 80, 15))
+local teleportButton = makeButton("TP",     Color3.fromRGB(110, 50, 180), Color3.fromRGB(70, 25, 120))
+local deleteButton   = makeButton("DELETE", Color3.fromRGB(170, 55, 45),  Color3.fromRGB(110, 30, 25))
 
--- ── COLUMN HEADERS ──────────────────────────────────────────
+-- COLUMN HEADERS
 local headerBar = Instance.new("Frame")
 headerBar.Size = UDim2.new(1, -12, 0, 28)
 headerBar.Position = UDim2.new(0, 6, 0, 116)
@@ -192,7 +206,7 @@ distHeader.Font = Enum.Font.GothamBlack
 distHeader.TextXAlignment = Enum.TextXAlignment.Right
 distHeader.Parent = headerBar
 
--- ── SCROLLING LIST ──────────────────────────────────────────
+-- SCROLLING LIST
 local listFrame = Instance.new("ScrollingFrame")
 listFrame.Size = UDim2.new(1, -12, 1, -202)
 listFrame.Position = UDim2.new(0, 6, 0, 148)
@@ -214,7 +228,7 @@ listLayout.Padding = UDim.new(0, 0)
 listLayout.SortOrder = Enum.SortOrder.LayoutOrder
 listLayout.Parent = listFrame
 
--- ── STATUS BAR ──────────────────────────────────────────────
+-- STATUS BAR
 local statusBar = Instance.new("Frame")
 statusBar.Size = UDim2.new(1, -12, 0, 32)
 statusBar.Position = UDim2.new(0, 6, 1, -38)
@@ -238,7 +252,7 @@ statusLabel.Font = Enum.Font.Gotham
 statusLabel.TextXAlignment = Enum.TextXAlignment.Left
 statusLabel.Parent = statusBar
 
--- ── WAYPOINT DATA ────────────────────────────────────────────
+-- WAYPOINT DATA
 local waypoints = {}
 local selectedWaypoint = nil
 
@@ -291,8 +305,9 @@ local function refreshList()
 		return
 	end
 
-	local selName = selectedWaypoint and selectedWaypoint.name or ""
-	setStatus(selectedWaypoint and ('Selected: "' .. selName .. '"') or "Click a waypoint to select it.")
+	setStatus(selectedWaypoint
+		and ('Selected: "' .. selectedWaypoint.name .. '"')
+		or "Click a waypoint to select it.")
 
 	for i, wp in ipairs(waypoints) do
 		local isSelected = (wp == selectedWaypoint)
@@ -306,7 +321,6 @@ local function refreshList()
 		row.BorderSizePixel = 0
 		row.Parent = listFrame
 
-		-- Bottom border line
 		local divider = Instance.new("Frame")
 		divider.Size = UDim2.new(1, 0, 0, 1)
 		divider.Position = UDim2.new(0, 0, 1, -1)
@@ -314,7 +328,6 @@ local function refreshList()
 		divider.BorderSizePixel = 0
 		divider.Parent = row
 
-		-- Name
 		local nameLabel = Instance.new("TextLabel")
 		nameLabel.Size = UDim2.new(0.55, -8, 1, 0)
 		nameLabel.Position = UDim2.new(0, 8, 0, 0)
@@ -326,28 +339,25 @@ local function refreshList()
 		nameLabel.Font = isSelected and Enum.Font.GothamBold or Enum.Font.Gotham
 		nameLabel.Parent = row
 
-		-- Distance
 		local distLabel = Instance.new("TextLabel")
 		distLabel.Name = "DistanceLabel"
 		distLabel.Size = UDim2.new(0.45, -8, 1, 0)
 		distLabel.Position = UDim2.new(0.55, 0, 0, 0)
 		distLabel.BackgroundTransparency = 1
 		distLabel.Text = "— studs"
-		distLabel.TextColor3 = isSelected and Color3.fromRGB(200,200,255) or Color3.fromRGB(80, 80, 80)
+		distLabel.TextColor3 = isSelected and Color3.fromRGB(200, 200, 255) or Color3.fromRGB(80, 80, 80)
 		distLabel.TextXAlignment = Enum.TextXAlignment.Right
 		distLabel.TextScaled = true
 		distLabel.Font = Enum.Font.Gotham
 		distLabel.Parent = row
 
-		-- Vertical divider between name and distance
 		local vDivider = Instance.new("Frame")
 		vDivider.Size = UDim2.new(0, 1, 0.7, 0)
 		vDivider.Position = UDim2.new(0.55, 0, 0.15, 0)
-		vDivider.BackgroundColor3 = isSelected and Color3.fromRGB(80,90,180) or Color3.fromRGB(180, 175, 155)
+		vDivider.BackgroundColor3 = isSelected and Color3.fromRGB(80, 90, 180) or Color3.fromRGB(180, 175, 155)
 		vDivider.BorderSizePixel = 0
 		vDivider.Parent = row
 
-		-- Click to select
 		local clickBtn = Instance.new("TextButton")
 		clickBtn.Size = UDim2.new(1, 0, 1, 0)
 		clickBtn.BackgroundTransparency = 1
@@ -362,7 +372,7 @@ local function refreshList()
 	end
 end
 
--- Live distance
+-- Live distance updater
 RunService.Heartbeat:Connect(function()
 	if not rootPart then return end
 	local playerPos = rootPart.Position
@@ -376,8 +386,7 @@ RunService.Heartbeat:Connect(function()
 	end
 end)
 
--- ── BUTTON ACTIONS ───────────────────────────────────────────
-
+-- ADD
 addButton.MouseButton1Click:Connect(function()
 	if not rootPart then return end
 	local newWP = {
@@ -392,13 +401,13 @@ addButton.MouseButton1Click:Connect(function()
 	refreshList()
 end)
 
+-- NAME / RENAME
 nameButton.MouseButton1Click:Connect(function()
 	if not selectedWaypoint then
 		setStatus("Select a waypoint first!")
 		return
 	end
 
-	-- Popup
 	local popup = Instance.new("Frame")
 	popup.Size = UDim2.new(0, 280, 0, 140)
 	popup.Position = UDim2.new(0.5, -140, 0.5, -70)
@@ -423,7 +432,7 @@ nameButton.MouseButton1Click:Connect(function()
 	popTitle.Size = UDim2.new(1, 0, 1, 0)
 	popTitle.BackgroundTransparency = 1
 	popTitle.Text = "RENAME WAYPOINT"
-	popTitle.TextColor3 = Color3.new(1,1,1)
+	popTitle.TextColor3 = Color3.new(1, 1, 1)
 	popTitle.TextScaled = true
 	popTitle.Font = Enum.Font.GothamBlack
 	popTitle.ZIndex = 10
@@ -432,7 +441,7 @@ nameButton.MouseButton1Click:Connect(function()
 	local textBox = Instance.new("TextBox")
 	textBox.Size = UDim2.new(1, -20, 0, 36)
 	textBox.Position = UDim2.new(0, 10, 0, 44)
-	textBox.BackgroundColor3 = Color3.new(1,1,1)
+	textBox.BackgroundColor3 = Color3.new(1, 1, 1)
 	textBox.Text = selectedWaypoint.name
 	textBox.TextScaled = true
 	textBox.Font = Enum.Font.Gotham
@@ -450,7 +459,7 @@ nameButton.MouseButton1Click:Connect(function()
 	saveBtn.Position = UDim2.new(0.04, 0, 1, -42)
 	saveBtn.BackgroundColor3 = Color3.fromRGB(55, 150, 55)
 	saveBtn.Text = "SAVE"
-	saveBtn.TextColor3 = Color3.new(1,1,1)
+	saveBtn.TextColor3 = Color3.new(1, 1, 1)
 	saveBtn.TextScaled = true
 	saveBtn.Font = Enum.Font.GothamBlack
 	saveBtn.ZIndex = 10
@@ -466,7 +475,7 @@ nameButton.MouseButton1Click:Connect(function()
 	cancelBtn.Position = UDim2.new(0.5, 0, 1, -42)
 	cancelBtn.BackgroundColor3 = Color3.fromRGB(170, 55, 45)
 	cancelBtn.Text = "CANCEL"
-	cancelBtn.TextColor3 = Color3.new(1,1,1)
+	cancelBtn.TextColor3 = Color3.new(1, 1, 1)
 	cancelBtn.TextScaled = true
 	cancelBtn.Font = Enum.Font.GothamBlack
 	cancelBtn.ZIndex = 10
@@ -499,6 +508,7 @@ nameButton.MouseButton1Click:Connect(function()
 	textBox:CaptureFocus()
 end)
 
+-- TELEPORT
 teleportButton.MouseButton1Click:Connect(function()
 	if not selectedWaypoint or not rootPart then
 		setStatus("Select a waypoint to teleport!")
@@ -510,6 +520,7 @@ teleportButton.MouseButton1Click:Connect(function()
 	setStatus('Teleported to "' .. selectedWaypoint.name .. '"')
 end)
 
+-- DELETE
 deleteButton.MouseButton1Click:Connect(function()
 	if not selectedWaypoint then
 		setStatus("Select a waypoint to delete!")
@@ -517,7 +528,10 @@ deleteButton.MouseButton1Click:Connect(function()
 	end
 	if selectedWaypoint.marker then selectedWaypoint.marker:Destroy() end
 	for i, wp in ipairs(waypoints) do
-		if wp == selectedWaypoint then table.remove(waypoints, i) break end
+		if wp == selectedWaypoint then
+			table.remove(waypoints, i)
+			break
+		end
 	end
 	selectedWaypoint = nil
 	refreshList()
