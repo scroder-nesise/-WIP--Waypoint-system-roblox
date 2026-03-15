@@ -1,0 +1,376 @@
+-- Waypoints System - LocalScript
+-- Paste this into a LocalScript under StarterPlayer > StarterPlayerScripts
+-- Features:
+-- • Add waypoint at your current location (creates a flat green circle marker on ground + floating name label)
+-- • List shows: Circle icon + Name + Live distance in studs
+-- • Click any list row to select it
+-- • Name button: Rename selected waypoint (updates both list and world marker)
+-- • Delete button: Remove selected waypoint + its marker
+-- • Select button: Toggle "Select Mode" — click directly on any world waypoint marker to select it
+-- Everything is client-side (visible only to you). No server needed.
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local rootPart = character:WaitForChild("HumanoidRootPart")
+
+-- Reconnect on respawn
+player.CharacterAdded:Connect(function(newChar)
+	character = newChar
+	rootPart = newChar:WaitForChild("HumanoidRootPart")
+end)
+
+-- Create ScreenGui
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "WaypointSystem"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = player:WaitForChild("PlayerGui")
+
+-- Main Frame
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 320, 0, 450)
+mainFrame.Position = UDim2.new(1, -340, 0.5, -225)
+mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+mainFrame.BorderSizePixel = 0
+mainFrame.Parent = screenGui
+
+local uiCorner = Instance.new("UICorner")
+uiCorner.CornerRadius = UDim.new(0, 8)
+uiCorner.Parent = mainFrame
+
+-- Title
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, 0, 0, 40)
+title.BackgroundTransparency = 1
+title.Text = "🚩 Waypoints System"
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.TextScaled = true
+title.Font = Enum.Font.GothamBold
+title.Parent = mainFrame
+
+-- Buttons Frame
+local buttonsFrame = Instance.new("Frame")
+buttonsFrame.Size = UDim2.new(1, -20, 0, 50)
+buttonsFrame.Position = UDim2.new(0, 10, 0, 45)
+buttonsFrame.BackgroundTransparency = 1
+buttonsFrame.Parent = mainFrame
+
+local buttonLayout = Instance.new("UIListLayout")
+buttonLayout.FillDirection = Enum.FillDirection.Horizontal
+buttonLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+buttonLayout.Padding = UDim.new(0, 8)
+buttonLayout.Parent = buttonsFrame
+
+-- Helper to create styled button
+local function createButton(text, color)
+	local btn = Instance.new("TextButton")
+	btn.Size = UDim2.new(0.22, 0, 1, 0)
+	btn.BackgroundColor3 = color
+	btn.Text = text
+	btn.TextColor3 = Color3.new(1, 1, 1)
+	btn.TextScaled = true
+	btn.Font = Enum.Font.GothamSemibold
+	btn.Parent = buttonsFrame
+	
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, 6)
+	corner.Parent = btn
+	
+	return btn
+end
+
+local addButton    = createButton("Add",    Color3.fromRGB(0, 170, 0))
+local selectButton = createButton("Select", Color3.fromRGB(0, 100, 255))
+local nameButton   = createButton("Name",   Color3.fromRGB(255, 140, 0))
+local deleteButton = createButton("Delete", Color3.fromRGB(170, 0, 0))
+
+-- Waypoints data
+local waypoints = {}  -- {name, position, marker (Part), guiEntry (Frame)}
+local selectedWaypoint = nil
+local isSelectMode = false
+
+-- Scrolling List
+local listFrame = Instance.new("ScrollingFrame")
+listFrame.Size = UDim2.new(1, -20, 1, -110)
+listFrame.Position = UDim2.new(0, 10, 0, 105)
+listFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+listFrame.ScrollBarThickness = 6
+listFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+listFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+listFrame.Parent = mainFrame
+
+local listCorner = Instance.new("UICorner")
+listCorner.CornerRadius = UDim.new(0, 8)
+listCorner.Parent = listFrame
+
+local listLayout = Instance.new("UIListLayout")
+listLayout.Padding = UDim.new(0, 6)
+listLayout.SortOrder = Enum.SortOrder.LayoutOrder
+listLayout.Parent = listFrame
+
+local listPadding = Instance.new("UIPadding")
+listPadding.PaddingLeft = UDim.new(0, 8)
+listPadding.PaddingRight = UDim.new(0, 8)
+listPadding.PaddingTop = UDim.new(0, 8)
+listPadding.Parent = listFrame
+
+-- Create world marker (flat circle + name billboard)
+local function createMarker(waypointData)
+	local part = Instance.new("Part")
+	part.Name = "WaypointMarker"
+	part.Shape = Enum.PartType.Cylinder
+	part.Size = Vector3.new(5, 0.2, 5)
+	part.Position = waypointData.position + Vector3.new(0, 0.1, 0)
+	part.Anchored = true
+	part.CanCollide = false
+	part.Transparency = 0.4
+	part.Color = Color3.fromRGB(0, 170, 255)
+	part.Parent = workspace
+	
+	waypointData.marker = part
+	
+	-- Floating name
+	local billboard = Instance.new("BillboardGui")
+	billboard.Adornee = part
+	billboard.Size = UDim2.new(0, 220, 0, 60)
+	billboard.StudsOffset = Vector3.new(0, 4, 0)
+	billboard.AlwaysOnTop = true
+	billboard.LightInfluence = 0
+	billboard.Parent = part
+	
+	local nameLabel = Instance.new("TextLabel")
+	nameLabel.Size = UDim2.new(1, 0, 1, 0)
+	nameLabel.BackgroundTransparency = 1
+	nameLabel.Text = waypointData.name
+	nameLabel.TextColor3 = Color3.new(1, 1, 1)
+	nameLabel.TextStrokeTransparency = 0
+	nameLabel.TextScaled = true
+	nameLabel.Font = Enum.Font.GothamBold
+	nameLabel.Parent = billboard
+end
+
+-- Refresh the entire list UI
+local function refreshList()
+	-- Clear old entries
+	for _, child in ipairs(listFrame:GetChildren()) do
+		if child:IsA("Frame") then
+			child:Destroy()
+		end
+	end
+	
+	for _, wp in ipairs(waypoints) do
+		local entry = Instance.new("Frame")
+		entry.Size = UDim2.new(1, 0, 0, 50)
+		entry.BackgroundColor3 = (wp == selectedWaypoint) and Color3.fromRGB(60, 60, 200) or Color3.fromRGB(45, 45, 45)
+		entry.BorderSizePixel = 0
+		entry.Parent = listFrame
+		
+		-- Circle icon
+		local icon = Instance.new("Frame")
+		icon.Size = UDim2.new(0, 32, 0, 32)
+		icon.Position = UDim2.new(0, 8, 0.5, -16)
+		icon.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+		icon.BorderSizePixel = 0
+		icon.Parent = entry
+		
+		local iconCorner = Instance.new("UICorner")
+		iconCorner.CornerRadius = UDim.new(0.5, 0) -- perfect circle
+		iconCorner.Parent = icon
+		
+		-- Name
+		local nameLabel = Instance.new("TextLabel")
+		nameLabel.Size = UDim2.new(0.5, -50, 1, 0)
+		nameLabel.Position = UDim2.new(0, 48, 0, 0)
+		nameLabel.BackgroundTransparency = 1
+		nameLabel.Text = wp.name
+		nameLabel.TextColor3 = Color3.new(1, 1, 1)
+		nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+		nameLabel.TextScaled = true
+		nameLabel.Font = Enum.Font.Gotham
+		nameLabel.Parent = entry
+		
+		-- Live distance
+		local distLabel = Instance.new("TextLabel")
+		distLabel.Name = "DistanceLabel"
+		distLabel.Size = UDim2.new(0.45, 0, 1, 0)
+		distLabel.Position = UDim2.new(0.55, 0, 0, 0)
+		distLabel.BackgroundTransparency = 1
+		distLabel.Text = "— studs"
+		distLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+		distLabel.TextXAlignment = Enum.TextXAlignment.Right
+		distLabel.TextScaled = true
+		distLabel.Font = Enum.Font.Gotham
+		distLabel.Parent = entry
+		
+		-- Click to select
+		local clickButton = Instance.new("TextButton")
+		clickButton.Size = UDim2.new(1, 0, 1, 0)
+		clickButton.BackgroundTransparency = 1
+		clickButton.Text = ""
+		clickButton.Parent = entry
+		clickButton.MouseButton1Click:Connect(function()
+			selectedWaypoint = wp
+			refreshList()
+		end)
+		
+		wp.guiEntry = entry  -- store reference for live distance updates
+	end
+end
+
+-- Live distance updater
+RunService.Heartbeat:Connect(function()
+	if not rootPart then return end
+	local playerPos = rootPart.Position
+	
+	for _, wp in ipairs(waypoints) do
+		if wp.guiEntry and wp.guiEntry.Parent then
+			local distLabel = wp.guiEntry:FindFirstChild("DistanceLabel")
+			if distLabel then
+				local dist = (playerPos - wp.position).Magnitude
+				distLabel.Text = math.floor(dist) .. " studs"
+			end
+		end
+	end
+end)
+
+-- Add waypoint
+addButton.MouseButton1Click:Connect(function()
+	if not rootPart then return end
+	
+	local newPos = rootPart.Position
+	local newName = "Waypoint " .. (#waypoints + 1)
+	
+	local newWP = {
+		name = newName,
+		position = newPos,
+		marker = nil,
+		guiEntry = nil
+	}
+	
+	table.insert(waypoints, newWP)
+	createMarker(newWP)
+	refreshList()
+end)
+
+-- Select Mode toggle
+selectButton.MouseButton1Click:Connect(function()
+	isSelectMode = not isSelectMode
+	selectButton.Text = isSelectMode and "Select Mode: ON" or "Select"
+end)
+
+-- World click selection (when Select Mode is on)
+local mouse = player:GetMouse()
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+	if gameProcessed then return end
+	if not isSelectMode then return end
+	if input.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
+	
+	if mouse.Target then
+		for _, wp in ipairs(waypoints) do
+			if wp.marker and (mouse.Target == wp.marker or mouse.Target.Parent == wp.marker) then
+				selectedWaypoint = wp
+				refreshList()
+				-- Optional: turn off mode after selecting
+				-- isSelectMode = false
+				-- selectButton.Text = "Select"
+				break
+			end
+		end
+	end
+end)
+
+-- Rename selected
+nameButton.MouseButton1Click:Connect(function()
+	if not selectedWaypoint then return end
+	
+	-- Temporary rename window
+	local renameGui = Instance.new("Frame")
+	renameGui.Size = UDim2.new(0, 280, 0, 120)
+	renameGui.Position = UDim2.new(0.5, -140, 0.5, -60)
+	renameGui.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+	renameGui.Parent = screenGui
+	
+	local rCorner = Instance.new("UICorner")
+	rCorner.CornerRadius = UDim.new(0, 8)
+	rCorner.Parent = renameGui
+	
+	local rTitle = Instance.new("TextLabel")
+	rTitle.Size = UDim2.new(1, 0, 0, 30)
+	rTitle.BackgroundTransparency = 1
+	rTitle.Text = "Rename Waypoint"
+	rTitle.TextColor3 = Color3.new(1, 1, 1)
+	rTitle.TextScaled = true
+	rTitle.Parent = renameGui
+	
+	local textBox = Instance.new("TextBox")
+	textBox.Size = UDim2.new(0.9, 0, 0, 35)
+	textBox.Position = UDim2.new(0.05, 0, 0.35, 0)
+	textBox.Text = selectedWaypoint.name
+	textBox.PlaceholderText = "New name here..."
+	textBox.TextScaled = true
+	textBox.Parent = renameGui
+	
+	local confirm = Instance.new("TextButton")
+	confirm.Size = UDim2.new(0.4, 0, 0, 30)
+	confirm.Position = UDim2.new(0.1, 0, 0.75, 0)
+	confirm.BackgroundColor3 = Color3.fromRGB(0, 170, 0)
+	confirm.Text = "Confirm"
+	confirm.Parent = renameGui
+	
+	local cancel = Instance.new("TextButton")
+	cancel.Size = UDim2.new(0.4, 0, 0, 30)
+	cancel.Position = UDim2.new(0.5, 0, 0.75, 0)
+	cancel.BackgroundColor3 = Color3.fromRGB(170, 0, 0)
+	cancel.Text = "Cancel"
+	cancel.Parent = renameGui
+	
+	confirm.MouseButton1Click:Connect(function()
+		if textBox.Text ~= "" then
+			selectedWaypoint.name = textBox.Text
+			
+			-- Update world marker
+			if selectedWaypoint.marker then
+				local bb = selectedWaypoint.marker:FindFirstChildOfClass("BillboardGui")
+				if bb then
+					local lbl = bb:FindFirstChildOfClass("TextLabel")
+					if lbl then lbl.Text = selectedWaypoint.name end
+				end
+			end
+		end
+		renameGui:Destroy()
+		refreshList()
+	end)
+	
+	cancel.MouseButton1Click:Connect(function()
+		renameGui:Destroy()
+	end)
+	
+	textBox:CaptureFocus()
+end)
+
+-- Delete selected
+deleteButton.MouseButton1Click:Connect(function()
+	if not selectedWaypoint then return end
+	
+	-- Remove marker
+	if selectedWaypoint.marker then
+		selectedWaypoint.marker:Destroy()
+	end
+	
+	-- Remove from table
+	for i, wp in ipairs(waypoints) do
+		if wp == selectedWaypoint then
+			table.remove(waypoints, i)
+			break
+		end
+	end
+	
+	selectedWaypoint = nil
+	refreshList()
+end)
+
+-- Initial setup
+refreshList()
