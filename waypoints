@@ -1,163 +1,192 @@
 -- ================================================================
---  Waypoints System v4  |  Classic Retro Style + Settings Panel
+--  Waypoints System v5  |  Cleaner GUI + Bug Fixes + More Settings
 -- ================================================================
 
 local Players          = game:GetService("Players")
 local RunService       = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
+local TweenService     = game:GetService("TweenService")
 
 local player    = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 local rootPart  = character:WaitForChild("HumanoidRootPart")
 
 player.CharacterAdded:Connect(function(newChar)
-    character = newChar
-    rootPart  = newChar:WaitForChild("HumanoidRootPart")
+	character = newChar
+	rootPart  = newChar:WaitForChild("HumanoidRootPart")
 end)
 
 -- ================================================================
 --  COLOUR PALETTE  (Classic Win95 / Roblox retro)
 -- ================================================================
 local C = {
-    BG          = Color3.fromRGB(185, 172, 151),
-    TITLE_BG    = Color3.fromRGB(41,  81, 164),
-    TITLE_TEXT  = Color3.fromRGB(255, 255, 255),
-    BORDER_DARK = Color3.fromRGB(100,  88,  68),
-    BORDER_LITE = Color3.fromRGB(220, 210, 195),
-    INSET_BG    = Color3.fromRGB(255, 255, 255),
-    INSET_BORDER= Color3.fromRGB(128, 128, 128),
-    SEL_BG      = Color3.fromRGB(41,  81, 164),
-    SEL_TEXT    = Color3.fromRGB(255, 255, 255),
-    ROW_ALT     = Color3.fromRGB(240, 237, 230),
-    ROW_NORMAL  = Color3.fromRGB(255, 255, 255),
-    BTN_FACE    = Color3.fromRGB(212, 202, 185),
-    BTN_SHADOW  = Color3.fromRGB(100,  88,  68),
-    TEXT_DARK   = Color3.fromRGB(30,  30,  30),
-    TEXT_MID    = Color3.fromRGB(90,  80,  65),
-    BTN_ADD     = Color3.fromRGB(66,  135,  66),
-    BTN_NAME    = Color3.fromRGB(164, 120,  41),
-    BTN_TP      = Color3.fromRGB(88,   60, 160),
-    BTN_DEL     = Color3.fromRGB(160,  55,  55),
-    BTN_SETT    = Color3.fromRGB(70,   70, 120),
-    CLOSE_FACE  = Color3.fromRGB(200,  60,  60),
+	BG          = Color3.fromRGB(185, 172, 151),
+	TITLE_BG    = Color3.fromRGB(41,  81, 164),
+	TITLE_TEXT  = Color3.fromRGB(255, 255, 255),
+	BORDER_DARK = Color3.fromRGB(100,  88,  68),
+	BORDER_LITE = Color3.fromRGB(220, 210, 195),
+	INSET_BG    = Color3.fromRGB(255, 255, 255),
+	INSET_BORDER= Color3.fromRGB(128, 128, 128),
+	SEL_BG      = Color3.fromRGB(41,  81, 164),
+	SEL_TEXT    = Color3.fromRGB(255, 255, 255),
+	ROW_ALT     = Color3.fromRGB(240, 237, 230),
+	ROW_NORMAL  = Color3.fromRGB(255, 255, 255),
+	BTN_FACE    = Color3.fromRGB(212, 202, 185),
+	BTN_SHADOW  = Color3.fromRGB(100,  88,  68),
+	TEXT_DARK   = Color3.fromRGB(30,  30,  30),
+	TEXT_MID    = Color3.fromRGB(90,  80,  65),
+	BTN_ADD     = Color3.fromRGB(66,  135,  66),
+	BTN_NAME    = Color3.fromRGB(164, 120,  41),
+	BTN_TP      = Color3.fromRGB(88,   60, 160),
+	BTN_DEL     = Color3.fromRGB(160,  55,  55),
+	BTN_SETT    = Color3.fromRGB(70,   70, 120),
+	CLOSE_FACE  = Color3.fromRGB(200,  60,  60),
 }
 
 -- ================================================================
---  SETTINGS STATE
+--  SETTINGS STATE  (expanded)
 -- ================================================================
 local MARKER_COLORS = {
-    { name="Blue",   color=Color3.fromRGB(41,  81, 164) },
-    { name="Green",  color=Color3.fromRGB(66,  135, 66) },
-    { name="Red",    color=Color3.fromRGB(160,  55, 55) },
-    { name="Purple", color=Color3.fromRGB(88,   60,160) },
-    { name="Gold",   color=Color3.fromRGB(200, 160, 40) },
-    { name="Cyan",   color=Color3.fromRGB(40,  160,200) },
+	{ name="Blue",   color=Color3.fromRGB(41,  81, 164) },
+	{ name="Green",  color=Color3.fromRGB(66,  135, 66) },
+	{ name="Red",    color=Color3.fromRGB(160,  55, 55) },
+	{ name="Purple", color=Color3.fromRGB(88,   60,160) },
+	{ name="Gold",   color=Color3.fromRGB(200, 160, 40) },
+	{ name="Cyan",   color=Color3.fromRGB(40,  160,200) },
 }
 
 local MARKER_SIZES = {
-    S = Vector3.new(4, 0.2, 4),
-    M = Vector3.new(6, 0.25, 6),
-    L = Vector3.new(9, 0.3, 9),
+	S = Vector3.new(4, 0.2, 4),
+	M = Vector3.new(6, 0.25, 6),
+	L = Vector3.new(9, 0.3, 9),
 }
 
 local settings = {
-    markerColorIdx = 1,        -- index into MARKER_COLORS
-    markerSize     = "M",      -- S / M / L
-    showLabels     = true,
-    sortMode       = "ORDER",  -- ORDER / DIST / NAME
-    distUnit       = "Studs",  -- Studs / Metres
-    tpHeight       = 5,        -- studs above waypoint on TP
-    maxWaypoints   = 0,        -- 0 = unlimited
+	markerColorIdx     = 1,
+	markerSize         = "M",
+	markerShape        = "Cylinder",   -- NEW: Cylinder / Sphere / Block
+	markerTransparency = 0.35,         -- NEW
+	showLabels         = true,
+	sortMode           = "ORDER",      -- ORDER / DIST / NAME
+	distUnit           = "Studs",      -- Studs / Metres
+	distMode           = "3D",         -- NEW: 3D / Horizontal
+	tpHeight           = 5,
+	smoothTp           = false,        -- NEW
+	maxWaypoints       = 0,            -- 0 = unlimited
+	showBeam           = false,        -- NEW
+	uiScale            = 1,            -- NEW: 0.8 / 1.0 / 1.2
 }
 
 -- ================================================================
---  FORWARD DECLARATIONS  (so settings closures can capture them)
+--  FORWARD DECLARATIONS
 -- ================================================================
 local waypoints        = {}
 local selectedWaypoint = nil
-local refreshList      -- assigned later
+local refreshList
+local createMarker
+local setStatus
+
+-- ================================================================
+--  3D BORDER SYSTEM  (NEW & FIXED — proper Win95 bevels)
+-- ================================================================
+local function applyBorder(frame, raised, thickness)
+	thickness = thickness or 2
+	local lite = raised and C.BORDER_LITE or C.BORDER_DARK
+	local dark = raised and C.BORDER_DARK or C.BORDER_LITE
+	local z    = frame.ZIndex + 1
+
+	local function strip(name, size, pos, color)
+		local s = Instance.new("Frame")
+		s.Name = name
+		s.Size = size
+		s.Position = pos
+		s.BackgroundColor3 = color
+		s.BorderSizePixel = 0
+		s.ZIndex = z
+		s.Parent = frame
+		return s
+	end
+
+	strip("Top",    UDim2.new(1, 0, 0, thickness), UDim2.new(0, 0, 0, 0), lite)
+	strip("Left",   UDim2.new(0, thickness, 1, 0), UDim2.new(0, 0, 0, 0), lite)
+	strip("Bottom", UDim2.new(1, 0, 0, thickness), UDim2.new(0, 0, 1, -thickness), dark)
+	strip("Right",  UDim2.new(0, thickness, 1, 0), UDim2.new(1, -thickness, 0, 0), dark)
+end
 
 -- ================================================================
 --  HELPERS
 -- ================================================================
-local function applyRaisedBorder(frame)
-    local s = Instance.new("UIStroke")
-    s.Thickness       = 2
-    s.Color           = C.BORDER_DARK
-    s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-    s.Parent          = frame
-    return s
-end
-
-local function addBevelStrip(parent, isTop)
-    local s = Instance.new("Frame")
-    s.BackgroundColor3 = C.BORDER_LITE
-    s.BorderSizePixel  = 0
-    s.ZIndex           = 2
-    s.Size             = isTop and UDim2.new(1, 0, 0, 2) or UDim2.new(0, 2, 1, 0)
-    s.Position         = UDim2.new(0, 0, 0, 0)
-    s.Parent           = parent
-end
-
 local function titleGradient(parent)
-    local g = Instance.new("UIGradient")
-    g.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(90, 130, 210)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(30,  65, 145)),
-    })
-    g.Rotation = 90
-    g.Parent   = parent
+	local g = Instance.new("UIGradient")
+	g.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, Color3.fromRGB(90, 130, 210)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(30,  65, 145)),
+	})
+	g.Rotation = 90
+	g.Parent   = parent
 end
 
 local function formatDist(studs)
-    if settings.distUnit == "Metres" then
-        return string.format("%.0fm", studs * 0.28)
-    end
-    return studs .. "st"
+	if settings.distUnit == "Metres" then
+		return string.format("%.0fm", studs * 0.28)
+	end
+	return studs .. "st"
+end
+
+local function getHorizontalDist(a, b)
+	local dx = a.X - b.X
+	local dz = a.Z - b.Z
+	return math.sqrt(dx*dx + dz*dz)
+end
+
+local function getDistToPlayer(pos)
+	if settings.distMode == "Horizontal" then
+		return getHorizontalDist(rootPart.Position, pos)
+	end
+	return (rootPart.Position - pos).Magnitude
 end
 
 local function retroHover(btn, baseColor)
-    btn.MouseEnter:Connect(function()
-        btn.BackgroundColor3 = Color3.new(
-            math.min(baseColor.R + 0.12, 1),
-            math.min(baseColor.G + 0.12, 1),
-            math.min(baseColor.B + 0.12, 1))
-    end)
-    btn.MouseLeave:Connect(function()
-        btn.BackgroundColor3 = baseColor
-    end)
-    btn.MouseButton1Down:Connect(function()
-        btn.BackgroundColor3 = Color3.new(
-            math.max(baseColor.R - 0.1, 0),
-            math.max(baseColor.G - 0.1, 0),
-            math.max(baseColor.B - 0.1, 0))
-    end)
-    btn.MouseButton1Up:Connect(function()
-        btn.BackgroundColor3 = baseColor
-    end)
+	btn.MouseEnter:Connect(function()
+		btn.BackgroundColor3 = Color3.new(
+			math.min(baseColor.R + 0.12, 1),
+			math.min(baseColor.G + 0.12, 1),
+			math.min(baseColor.B + 0.12, 1))
+	end)
+	btn.MouseLeave:Connect(function()
+		btn.BackgroundColor3 = baseColor
+	end)
+	btn.MouseButton1Down:Connect(function()
+		btn.BackgroundColor3 = Color3.new(
+			math.max(baseColor.R - 0.1, 0),
+			math.max(baseColor.G - 0.1, 0),
+			math.max(baseColor.B - 0.1, 0))
+	end)
+	btn.MouseButton1Up:Connect(function()
+		btn.BackgroundColor3 = baseColor
+	end)
 end
 
 -- ================================================================
 --  SCREEN GUI
 -- ================================================================
 local screenGui = Instance.new("ScreenGui")
-screenGui.Name           = "WaypointSystem"
+screenGui.Name           = "WaypointSystemV5"
 screenGui.ResetOnSpawn   = false
 screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 screenGui.Parent         = player:WaitForChild("PlayerGui")
 
 -- ================================================================
---  MAIN FRAME
+--  MAIN FRAME  (scaled by uiScale)
 -- ================================================================
+local BASE_W, BASE_H = 320, 440
 local mainFrame = Instance.new("Frame")
-mainFrame.Size             = UDim2.new(0, 300, 0, 400)
-mainFrame.Position         = UDim2.new(1, -320, 0.5, -200)
+mainFrame.Size             = UDim2.new(0, BASE_W * settings.uiScale, 0, BASE_H * settings.uiScale)
+mainFrame.Position         = UDim2.new(1, -(BASE_W * settings.uiScale) - 20, 0.5, -(BASE_H * settings.uiScale) / 2)
 mainFrame.BackgroundColor3 = C.BG
 mainFrame.BorderSizePixel  = 0
 mainFrame.Parent           = screenGui
-applyRaisedBorder(mainFrame)
-addBevelStrip(mainFrame, true)
-addBevelStrip(mainFrame, false)
+applyBorder(mainFrame, true)
 
 -- ================================================================
 --  TITLE BAR
@@ -172,12 +201,12 @@ titleBar.Parent           = mainFrame
 titleGradient(titleBar)
 
 local titleLabel = Instance.new("TextLabel")
-titleLabel.Size                   = UDim2.new(1, -62, 1, 0)
+titleLabel.Size                   = UDim2.new(1, -100, 1, 0)
 titleLabel.Position               = UDim2.new(0, 6, 0, 0)
 titleLabel.BackgroundTransparency = 1
 titleLabel.Text                   = "📍 WAYPOINTS"
 titleLabel.TextColor3             = C.TITLE_TEXT
-titleLabel.TextScaled             = true
+titleLabel.TextSize               = 18
 titleLabel.Font                   = Enum.Font.Legacy
 titleLabel.TextXAlignment         = Enum.TextXAlignment.Left
 titleLabel.TextStrokeColor3       = Color3.fromRGB(0, 0, 80)
@@ -185,20 +214,32 @@ titleLabel.TextStrokeTransparency = 0.5
 titleLabel.ZIndex                 = 4
 titleLabel.Parent                 = titleBar
 
--- ⚙ Settings button (to the LEFT of X)
+local countLabel = Instance.new("TextLabel")
+countLabel.Size                   = UDim2.new(0, 60, 1, 0)
+countLabel.Position               = UDim2.new(1, -90, 0, 0)
+countLabel.BackgroundTransparency = 1
+countLabel.Text                   = "0"
+countLabel.TextColor3             = Color3.new(1,1,1)
+countLabel.TextSize               = 14
+countLabel.Font                   = Enum.Font.Legacy
+countLabel.TextXAlignment         = Enum.TextXAlignment.Right
+countLabel.ZIndex                 = 4
+countLabel.Parent                 = titleBar
+
+-- ⚙ Settings button
 local settingsBtn = Instance.new("TextButton")
 settingsBtn.Size             = UDim2.new(0, 22, 0, 20)
 settingsBtn.Position         = UDim2.new(1, -50, 0, 4)
 settingsBtn.BackgroundColor3 = C.BTN_SETT
 settingsBtn.Text             = "⚙"
 settingsBtn.TextColor3       = Color3.new(1, 1, 1)
-settingsBtn.TextScaled       = true
+settingsBtn.TextSize         = 16
 settingsBtn.Font             = Enum.Font.Legacy
 settingsBtn.BorderSizePixel  = 0
 settingsBtn.AutoButtonColor  = false
 settingsBtn.ZIndex           = 5
 settingsBtn.Parent           = titleBar
-applyRaisedBorder(settingsBtn)
+applyBorder(settingsBtn, true)
 retroHover(settingsBtn, C.BTN_SETT)
 
 -- ✕ Close button
@@ -208,66 +249,56 @@ closeBtn.Position         = UDim2.new(1, -25, 0, 4)
 closeBtn.BackgroundColor3 = C.CLOSE_FACE
 closeBtn.Text             = "X"
 closeBtn.TextColor3       = Color3.new(1, 1, 1)
-closeBtn.TextScaled       = true
+closeBtn.TextSize         = 16
 closeBtn.Font             = Enum.Font.Legacy
 closeBtn.BorderSizePixel  = 0
 closeBtn.AutoButtonColor  = false
 closeBtn.ZIndex           = 5
 closeBtn.Parent           = titleBar
-applyRaisedBorder(closeBtn)
+applyBorder(closeBtn, true)
 retroHover(closeBtn, C.CLOSE_FACE)
 
 closeBtn.MouseButton1Click:Connect(function()
-    screenGui:Destroy()
+	screenGui:Destroy()
 end)
 
 -- ================================================================
---  DRAGGABLE LOGIC  (drag by title bar)
+--  DRAGGABLE LOGIC
 -- ================================================================
 local dragging = false
 local dragStart, startPos
 
 titleBar.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1
-        or input.UserInputType == Enum.UserInputType.Touch then
-        dragging  = true
-        dragStart = input.Position
-        startPos  = mainFrame.Position
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                dragging = false
-            end
-        end)
-    end
+	if input.UserInputType == Enum.UserInputType.MouseButton1
+		or input.UserInputType == Enum.UserInputType.Touch then
+		dragging  = true
+		dragStart = input.Position
+		startPos  = mainFrame.Position
+		input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End then
+				dragging = false
+			end
+		end)
+	end
 end)
 
 UserInputService.InputChanged:Connect(function(input)
-    if dragging and (
-        input.UserInputType == Enum.UserInputType.MouseMovement or
-        input.UserInputType == Enum.UserInputType.Touch) then
-        local delta = input.Position - dragStart
-        mainFrame.Position = UDim2.new(
-            startPos.X.Scale, startPos.X.Offset + delta.X,
-            startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-    end
+	if dragging and (
+		input.UserInputType == Enum.UserInputType.MouseMovement or
+		input.UserInputType == Enum.UserInputType.Touch) then
+		local delta = input.Position - dragStart
+		mainFrame.Position = UDim2.new(
+			startPos.X.Scale, startPos.X.Offset + delta.X,
+			startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+	end
 end)
 
 -- ================================================================
---  DIVIDER
--- ================================================================
-local divider = Instance.new("Frame")
-divider.Size             = UDim2.new(1, -8, 0, 2)
-divider.Position         = UDim2.new(0, 4, 0, 36)
-divider.BackgroundColor3 = C.BORDER_DARK
-divider.BorderSizePixel  = 0
-divider.Parent           = mainFrame
-
--- ================================================================
---  BUTTON ROW  (ADD / NAME / TP / DELETE)
+--  BUTTON ROW
 -- ================================================================
 local buttonsFrame = Instance.new("Frame")
 buttonsFrame.Size             = UDim2.new(1, -12, 0, 34)
-buttonsFrame.Position         = UDim2.new(0, 6, 0, 44)
+buttonsFrame.Position         = UDim2.new(0, 6, 0, 40)
 buttonsFrame.BackgroundTransparency = 1
 buttonsFrame.Parent           = mainFrame
 
@@ -278,19 +309,19 @@ btnLayout.Padding             = UDim.new(0, 4)
 btnLayout.Parent              = buttonsFrame
 
 local function createRetroButton(text, faceColor)
-    local btn = Instance.new("TextButton")
-    btn.Size             = UDim2.new(0, 62, 1, 0)
-    btn.BackgroundColor3 = faceColor
-    btn.Text             = text
-    btn.TextColor3       = Color3.new(1, 1, 1)
-    btn.TextScaled       = true
-    btn.Font             = Enum.Font.Legacy
-    btn.BorderSizePixel  = 0
-    btn.AutoButtonColor  = false
-    btn.Parent           = buttonsFrame
-    applyRaisedBorder(btn)
-    retroHover(btn, faceColor)
-    return btn
+	local btn = Instance.new("TextButton")
+	btn.Size             = UDim2.new(0, 68, 1, 0)
+	btn.BackgroundColor3 = faceColor
+	btn.Text             = text
+	btn.TextColor3       = Color3.new(1, 1, 1)
+	btn.TextSize         = 14
+	btn.Font             = Enum.Font.Legacy
+	btn.BorderSizePixel  = 0
+	btn.AutoButtonColor  = false
+	btn.Parent           = buttonsFrame
+	applyBorder(btn, true)
+	retroHover(btn, faceColor)
+	return btn
 end
 
 local addButton      = createRetroButton("ADD",    C.BTN_ADD)
@@ -299,21 +330,11 @@ local teleportButton = createRetroButton("TP",     C.BTN_TP)
 local deleteButton   = createRetroButton("DELETE", C.BTN_DEL)
 
 -- ================================================================
---  DIVIDER 2
--- ================================================================
-local divider2 = Instance.new("Frame")
-divider2.Size             = UDim2.new(1, -8, 0, 2)
-divider2.Position         = UDim2.new(0, 4, 0, 84)
-divider2.BackgroundColor3 = C.BORDER_DARK
-divider2.BorderSizePixel  = 0
-divider2.Parent           = mainFrame
-
--- ================================================================
 --  COLUMN HEADER BAR
 -- ================================================================
 local headerBar = Instance.new("Frame")
-headerBar.Size             = UDim2.new(1, -12, 0, 18)
-headerBar.Position         = UDim2.new(0, 6, 0, 90)
+headerBar.Size             = UDim2.new(1, -12, 0, 20)
+headerBar.Position         = UDim2.new(0, 6, 0, 80)
 headerBar.BackgroundColor3 = C.TITLE_BG
 headerBar.BorderSizePixel  = 0
 headerBar.Parent           = mainFrame
@@ -325,7 +346,7 @@ hName.Position           = UDim2.new(0, 4, 0, 0)
 hName.BackgroundTransparency = 1
 hName.Text               = "NAME"
 hName.TextColor3         = Color3.new(1, 1, 1)
-hName.TextScaled         = true
+hName.TextSize           = 14
 hName.Font               = Enum.Font.Legacy
 hName.TextXAlignment     = Enum.TextXAlignment.Left
 hName.Parent             = headerBar
@@ -336,7 +357,7 @@ hDist.Position           = UDim2.new(0.55, 0, 0, 0)
 hDist.BackgroundTransparency = 1
 hDist.Text               = "DISTANCE"
 hDist.TextColor3         = Color3.new(1, 1, 1)
-hDist.TextScaled         = true
+hDist.TextSize           = 14
 hDist.Font               = Enum.Font.Legacy
 hDist.TextXAlignment     = Enum.TextXAlignment.Right
 hDist.Parent             = headerBar
@@ -345,8 +366,8 @@ hDist.Parent             = headerBar
 --  SCROLLING LIST
 -- ================================================================
 local listFrame = Instance.new("ScrollingFrame")
-listFrame.Size                 = UDim2.new(1, -12, 1, -156)
-listFrame.Position             = UDim2.new(0, 6, 0, 112)
+listFrame.Size                 = UDim2.new(1, -12, 1, -152)
+listFrame.Position             = UDim2.new(0, 6, 0, 104)
 listFrame.BackgroundColor3     = C.INSET_BG
 listFrame.ScrollBarThickness   = 10
 listFrame.ScrollBarImageColor3 = C.BORDER_DARK
@@ -370,12 +391,12 @@ listLayout.Parent    = listFrame
 --  STATUS BAR
 -- ================================================================
 local statusBar = Instance.new("Frame")
-statusBar.Size             = UDim2.new(1, -8, 0, 20)
-statusBar.Position         = UDim2.new(0, 4, 1, -24)
+statusBar.Size             = UDim2.new(1, -8, 0, 22)
+statusBar.Position         = UDim2.new(0, 4, 1, -26)
 statusBar.BackgroundColor3 = C.BG
 statusBar.BorderSizePixel  = 0
 statusBar.Parent           = mainFrame
-applyRaisedBorder(statusBar)
+applyBorder(statusBar, true)
 
 local statusLabel = Instance.new("TextLabel")
 statusLabel.Size               = UDim2.new(1, -8, 1, 0)
@@ -383,13 +404,17 @@ statusLabel.Position           = UDim2.new(0, 4, 0, 0)
 statusLabel.BackgroundTransparency = 1
 statusLabel.Text               = "No waypoints. Press ADD to create one."
 statusLabel.TextColor3         = C.TEXT_DARK
-statusLabel.TextScaled         = true
+statusLabel.TextSize           = 13
 statusLabel.Font               = Enum.Font.Legacy
 statusLabel.TextXAlignment     = Enum.TextXAlignment.Left
 statusLabel.Parent             = statusBar
 
+function setStatus(msg)
+	statusLabel.Text = msg
+end
+
 -- ================================================================
---  SETTINGS PANEL  (ZIndex 20 – sits over list/buttons area)
+--  SETTINGS PANEL
 -- ================================================================
 local settingsPanel = Instance.new("Frame")
 settingsPanel.Name             = "SettingsPanel"
@@ -400,9 +425,8 @@ settingsPanel.BorderSizePixel  = 0
 settingsPanel.ZIndex           = 20
 settingsPanel.Visible          = false
 settingsPanel.Parent           = mainFrame
-addBevelStrip(settingsPanel, true)
+applyBorder(settingsPanel, true)
 
--- Settings mini header bar
 local sHeader = Instance.new("Frame")
 sHeader.Size             = UDim2.new(1, -8, 0, 24)
 sHeader.Position         = UDim2.new(0, 4, 0, 4)
@@ -418,7 +442,7 @@ sHeaderLbl.Position               = UDim2.new(0, 6, 0, 0)
 sHeaderLbl.BackgroundTransparency = 1
 sHeaderLbl.Text                   = "⚙  SETTINGS"
 sHeaderLbl.TextColor3             = Color3.new(1, 1, 1)
-sHeaderLbl.TextScaled             = true
+sHeaderLbl.TextSize               = 16
 sHeaderLbl.Font                   = Enum.Font.Legacy
 sHeaderLbl.TextXAlignment         = Enum.TextXAlignment.Left
 sHeaderLbl.ZIndex                 = 22
@@ -430,615 +454,810 @@ doneBtn.Position         = UDim2.new(1, -48, 0, 3)
 doneBtn.BackgroundColor3 = C.BTN_FACE
 doneBtn.Text             = "DONE"
 doneBtn.TextColor3       = C.TEXT_DARK
-doneBtn.TextScaled       = true
+doneBtn.TextSize         = 13
 doneBtn.Font             = Enum.Font.Legacy
 doneBtn.BorderSizePixel  = 0
 doneBtn.AutoButtonColor  = false
 doneBtn.ZIndex           = 22
 doneBtn.Parent           = sHeader
-applyRaisedBorder(doneBtn)
+applyBorder(doneBtn, true)
 retroHover(doneBtn, C.BTN_FACE)
 
--- Settings scroll area
 local sScroll = Instance.new("ScrollingFrame")
 sScroll.Size                 = UDim2.new(1, -4, 1, -34)
 sScroll.Position             = UDim2.new(0, 2, 0, 32)
 sScroll.BackgroundTransparency = 1
 sScroll.ScrollBarThickness   = 8
 sScroll.ScrollBarImageColor3 = C.BORDER_DARK
-sScroll.CanvasSize           = UDim2.new(0, 0, 0, 350)
+sScroll.CanvasSize           = UDim2.new(0, 0, 0, 480)
 sScroll.BorderSizePixel      = 0
 sScroll.ZIndex               = 21
 sScroll.Parent               = settingsPanel
 
 local sContent = Instance.new("Frame")
-sContent.Size                = UDim2.new(1, 0, 0, 350)
+sContent.Size                = UDim2.new(1, 0, 0, 480)
 sContent.BackgroundTransparency = 1
 sContent.ZIndex              = 21
 sContent.Parent              = sScroll
 
--- ── Settings UI helpers ───────────────────────────────────
-
+-- Settings UI helpers
 local function sectionHeader(yPos, text)
-    local f = Instance.new("Frame")
-    f.Size             = UDim2.new(1, -8, 0, 16)
-    f.Position         = UDim2.new(0, 4, 0, yPos)
-    f.BackgroundColor3 = C.TITLE_BG
-    f.BorderSizePixel  = 0
-    f.ZIndex           = 22
-    f.Parent           = sContent
-    titleGradient(f)
-    local l = Instance.new("TextLabel")
-    l.Size               = UDim2.new(1, -6, 1, 0)
-    l.Position           = UDim2.new(0, 6, 0, 0)
-    l.BackgroundTransparency = 1
-    l.Text               = text
-    l.TextColor3         = Color3.new(1, 1, 1)
-    l.TextScaled         = true
-    l.Font               = Enum.Font.Legacy
-    l.TextXAlignment     = Enum.TextXAlignment.Left
-    l.ZIndex             = 23
-    l.Parent             = f
+	local f = Instance.new("Frame")
+	f.Size             = UDim2.new(1, -8, 0, 18)
+	f.Position         = UDim2.new(0, 4, 0, yPos)
+	f.BackgroundColor3 = C.TITLE_BG
+	f.BorderSizePixel  = 0
+	f.ZIndex           = 22
+	f.Parent           = sContent
+	titleGradient(f)
+	local l = Instance.new("TextLabel")
+	l.Size               = UDim2.new(1, -6, 1, 0)
+	l.Position           = UDim2.new(0, 6, 0, 0)
+	l.BackgroundTransparency = 1
+	l.Text               = text
+	l.TextColor3         = Color3.new(1, 1, 1)
+	l.TextSize           = 13
+	l.Font               = Enum.Font.Legacy
+	l.TextXAlignment     = Enum.TextXAlignment.Left
+	l.ZIndex             = 23
+	l.Parent             = f
 end
 
 local function rowLabel(yPos, text)
-    local l = Instance.new("TextLabel")
-    l.Size               = UDim2.new(0, 82, 0, 22)
-    l.Position           = UDim2.new(0, 6, 0, yPos)
-    l.BackgroundTransparency = 1
-    l.Text               = text
-    l.TextColor3         = C.TEXT_DARK
-    l.TextScaled         = true
-    l.Font               = Enum.Font.Legacy
-    l.TextXAlignment     = Enum.TextXAlignment.Left
-    l.ZIndex             = 22
-    l.Parent             = sContent
+	local l = Instance.new("TextLabel")
+	l.Size               = UDim2.new(0, 82, 0, 22)
+	l.Position           = UDim2.new(0, 6, 0, yPos)
+	l.BackgroundTransparency = 1
+	l.Text               = text
+	l.TextColor3         = C.TEXT_DARK
+	l.TextSize           = 13
+	l.Font               = Enum.Font.Legacy
+	l.TextXAlignment     = Enum.TextXAlignment.Left
+	l.ZIndex             = 22
+	l.Parent             = sContent
 end
 
--- Mutually-exclusive option button group
-local function optionGroup(yPos, xStart, opts, activeIdx, btnW, onSelect)
-    local btns = {}
-    local gap = 4
-    for i, text in ipairs(opts) do
-        local btn = Instance.new("TextButton")
-        btn.Size             = UDim2.new(0, btnW, 0, 22)
-        btn.Position         = UDim2.new(0, xStart + (i - 1) * (btnW + gap), 0, yPos)
-        btn.BackgroundColor3 = (i == activeIdx) and C.SEL_BG or C.BTN_FACE
-        btn.Text             = text
-        btn.TextColor3       = (i == activeIdx) and Color3.new(1,1,1) or C.TEXT_DARK
-        btn.TextScaled       = true
-        btn.Font             = Enum.Font.Legacy
-        btn.BorderSizePixel  = 0
-        btn.AutoButtonColor  = false
-        btn.ZIndex           = 22
-        btn.Parent           = sContent
-        applyRaisedBorder(btn)
-        table.insert(btns, btn)
-    end
-    local function setActive(idx)
-        for j, b in ipairs(btns) do
-            b.BackgroundColor3 = (j == idx) and C.SEL_BG or C.BTN_FACE
-            b.TextColor3       = (j == idx) and Color3.new(1,1,1) or C.TEXT_DARK
-        end
-    end
-    for i, btn in ipairs(btns) do
-        local ci = i
-        btn.MouseButton1Click:Connect(function()
-            setActive(ci)
-            onSelect(ci, opts[ci])
-        end)
-    end
-    return btns
+-- Track settings controls so we can sync them later
+local settingsControls = {}
+
+local function optionGroup(yPos, xStart, opts, activeIdx, btnW, onSelect, key)
+	local btns = {}
+	local gap = 4
+	for i, text in ipairs(opts) do
+		local btn = Instance.new("TextButton")
+		btn.Size             = UDim2.new(0, btnW, 0, 22)
+		btn.Position         = UDim2.new(0, xStart + (i - 1) * (btnW + gap), 0, yPos)
+		btn.BackgroundColor3 = (i == activeIdx) and C.SEL_BG or C.BTN_FACE
+		btn.Text             = text
+		btn.TextColor3       = (i == activeIdx) and Color3.new(1,1,1) or C.TEXT_DARK
+		btn.TextSize         = 12
+		btn.Font             = Enum.Font.Legacy
+		btn.BorderSizePixel  = 0
+		btn.AutoButtonColor  = false
+		btn.ZIndex           = 22
+		btn.Parent           = sContent
+		applyBorder(btn, true)
+		table.insert(btns, btn)
+	end
+	local function setActive(idx)
+		for j, b in ipairs(btns) do
+			b.BackgroundColor3 = (j == idx) and C.SEL_BG or C.BTN_FACE
+			b.TextColor3       = (j == idx) and Color3.new(1,1,1) or C.TEXT_DARK
+		end
+	end
+	for i, btn in ipairs(btns) do
+		btn.MouseButton1Click:Connect(function()
+			setActive(i)
+			onSelect(i, opts[i])
+		end)
+	end
+	if key then settingsControls[key] = setActive end
+	return setActive
 end
 
--- Full-width action button
 local function actionButton(yPos, text, color)
-    local btn = Instance.new("TextButton")
-    btn.Size             = UDim2.new(1, -16, 0, 26)
-    btn.Position         = UDim2.new(0, 8, 0, yPos)
-    btn.BackgroundColor3 = color
-    btn.Text             = text
-    btn.TextColor3       = Color3.new(1, 1, 1)
-    btn.TextScaled       = true
-    btn.Font             = Enum.Font.Legacy
-    btn.BorderSizePixel  = 0
-    btn.AutoButtonColor  = false
-    btn.ZIndex           = 22
-    btn.Parent           = sContent
-    applyRaisedBorder(btn)
-    retroHover(btn, color)
-    return btn
+	local btn = Instance.new("TextButton")
+	btn.Size             = UDim2.new(1, -16, 0, 26)
+	btn.Position         = UDim2.new(0, 8, 0, yPos)
+	btn.BackgroundColor3 = color
+	btn.Text             = text
+	btn.TextColor3       = Color3.new(1, 1, 1)
+	btn.TextSize         = 13
+	btn.Font             = Enum.Font.Legacy
+	btn.BorderSizePixel  = 0
+	btn.AutoButtonColor  = false
+	btn.ZIndex           = 22
+	btn.Parent           = sContent
+	applyBorder(btn, true)
+	retroHover(btn, color)
+	return btn
 end
 
--- ── Section: APPEARANCE ───────────────────────────────────
--- y=4   APPEARANCE header
--- y=24  Colour swatches
--- y=50  Size
--- y=76  Labels
-
+-- ── APPEARANCE ──
 sectionHeader(4, "APPEARANCE")
 
 rowLabel(24, "Colour:")
 local colorBtns = {}
 for i, cData in ipairs(MARKER_COLORS) do
-    local btn = Instance.new("TextButton")
-    btn.Size             = UDim2.new(0, 20, 0, 20)
-    btn.Position         = UDim2.new(0, 90 + (i - 1) * 25, 0, 25)
-    btn.BackgroundColor3 = cData.color
-    btn.Text             = ""
-    btn.BorderSizePixel  = 0
-    btn.AutoButtonColor  = false
-    btn.ZIndex           = 22
-    btn.Parent           = sContent
-    local stroke = Instance.new("UIStroke")
-    stroke.Thickness       = 2
-    stroke.Color           = (i == 1) and Color3.new(1,1,1) or Color3.fromRGB(80,80,80)
-    stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-    stroke.Parent          = btn
-    table.insert(colorBtns, { btn = btn, stroke = stroke })
-    local ci = i
-    btn.MouseButton1Click:Connect(function()
-        for j, cb in ipairs(colorBtns) do
-            cb.stroke.Color = (j == ci) and Color3.new(1,1,1) or Color3.fromRGB(80,80,80)
-        end
-        settings.markerColorIdx = ci
-        for _, wp in ipairs(waypoints) do
-            if wp.marker then wp.marker.Color = MARKER_COLORS[ci].color end
-        end
-    end)
+	local btn = Instance.new("TextButton")
+	btn.Size             = UDim2.new(0, 20, 0, 20)
+	btn.Position         = UDim2.new(0, 90 + (i - 1) * 25, 0, 25)
+	btn.BackgroundColor3 = cData.color
+	btn.Text             = ""
+	btn.BorderSizePixel  = 0
+	btn.AutoButtonColor  = false
+	btn.ZIndex           = 22
+	btn.Parent           = sContent
+	local stroke = Instance.new("UIStroke")
+	stroke.Thickness       = 2
+	stroke.Color           = (i == 1) and Color3.new(1,1,1) or Color3.fromRGB(80,80,80)
+	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	stroke.Parent          = btn
+	table.insert(colorBtns, { btn = btn, stroke = stroke })
+	btn.MouseButton1Click:Connect(function()
+		for j, cb in ipairs(colorBtns) do
+			cb.stroke.Color = (j == i) and Color3.new(1,1,1) or Color3.fromRGB(80,80,80)
+		end
+		settings.markerColorIdx = i
+		for _, wp in ipairs(waypoints) do
+			if wp.marker then wp.marker.Color = MARKER_COLORS[i].color end
+		end
+		updateBeamColor()
+	end)
 end
 
 rowLabel(50, "Size:")
 optionGroup(50, 90, {"S", "M", "L"}, 2, 30, function(_, val)
-    settings.markerSize = val
-    local sz = MARKER_SIZES[val]
-    for _, wp in ipairs(waypoints) do
-        if wp.marker then wp.marker.Size = sz end
-    end
-end)
+	settings.markerSize = val
+	local sz = MARKER_SIZES[val]
+	for _, wp in ipairs(waypoints) do
+		if wp.marker then wp.marker.Size = sz end
+	end
+end, "size")
 
-rowLabel(76, "Labels:")
-optionGroup(76, 90, {"SHOW", "HIDE"}, 1, 46, function(idx, _)
-    settings.showLabels = (idx == 1)
-    for _, wp in ipairs(waypoints) do
-        if wp.marker then
-            local bb = wp.marker:FindFirstChildOfClass("BillboardGui")
-            if bb then bb.Enabled = settings.showLabels end
-        end
-    end
-end)
+rowLabel(76, "Shape:")
+optionGroup(76, 90, {"Cylinder", "Sphere", "Block"}, 1, 54, function(_, val)
+	settings.markerShape = val
+	-- Recreate markers so shape changes apply immediately
+	for _, wp in ipairs(waypoints) do
+		if wp.marker then
+			wp.marker:Destroy()
+			createMarker(wp)
+		end
+	end
+end, "shape")
 
--- ── Section: BEHAVIOUR ────────────────────────────────────
--- y=106 BEHAVIOUR header
--- y=126 Sort
--- y=152 Units
--- y=178 TP Lift
+rowLabel(102, "Opacity:")
+optionGroup(102, 90, {"25%", "50%", "75%"}, 2, 34, function(_, val)
+	local t = tonumber(val:sub(1, -2)) / 100
+	settings.markerTransparency = t
+	for _, wp in ipairs(waypoints) do
+		if wp.marker then wp.marker.Transparency = t end
+	end
+end, "opacity")
 
-sectionHeader(106, "BEHAVIOUR")
+rowLabel(128, "Labels:")
+optionGroup(128, 90, {"SHOW", "HIDE"}, 1, 46, function(idx, _)
+	settings.showLabels = (idx == 1)
+	for _, wp in ipairs(waypoints) do
+		if wp.marker then
+			local bb = wp.marker:FindFirstChildOfClass("BillboardGui")
+			if bb then bb.Enabled = settings.showLabels end
+		end
+	end
+end, "labels")
 
-rowLabel(126, "Sort by:")
-optionGroup(126, 90, {"ORDER", "DIST", "NAME"}, 1, 54, function(_, val)
-    settings.sortMode = val
-    if refreshList then refreshList() end
-end)
+-- ── BEHAVIOUR ──
+sectionHeader(154, "BEHAVIOUR")
 
-rowLabel(152, "Units:")
-optionGroup(152, 90, {"STUDS", "METRES"}, 1, 50, function(_, val)
-    settings.distUnit = (val == "STUDS") and "Studs" or "Metres"
-end)
+rowLabel(174, "Sort by:")
+optionGroup(174, 90, {"ORDER", "DIST", "NAME"}, 1, 54, function(_, val)
+	settings.sortMode = val
+	if refreshList then refreshList() end
+end, "sort")
 
-rowLabel(178, "TP Lift:")
-optionGroup(178, 90, {"+3", "+5", "+8"}, 2, 34, function(_, val)
-    settings.tpHeight = tonumber(val:sub(2))
-end)
+rowLabel(200, "Units:")
+optionGroup(200, 90, {"STUDS", "METRES"}, 1, 50, function(_, val)
+	settings.distUnit = (val == "STUDS") and "Studs" or "Metres"
+end, "units")
 
--- ── Section: LIMITS ───────────────────────────────────────
--- y=208 LIMITS header
--- y=228 Max WPs
+rowLabel(226, "Dist Mode:")
+optionGroup(226, 90, {"3D", "HORIZ"}, 1, 46, function(_, val)
+	settings.distMode = val
+end, "distMode")
 
-sectionHeader(208, "LIMITS")
+rowLabel(252, "TP Lift:")
+optionGroup(252, 90, {"+3", "+5", "+8"}, 2, 34, function(_, val)
+	settings.tpHeight = tonumber(val:sub(2))
+end, "tpLift")
 
-rowLabel(228, "Max WPs:")
-optionGroup(228, 90, {"∞", "5", "10", "20"}, 1, 34, function(_, val)
-    settings.maxWaypoints = (val == "∞") and 0 or tonumber(val)
-end)
+rowLabel(278, "TP Style:")
+optionGroup(278, 90, {"INSTANT", "SMOOTH"}, 1, 50, function(idx, val)
+	settings.smoothTp = (val == "SMOOTH")
+end, "tpStyle")
 
--- ── Section: TOOLS ────────────────────────────────────────
--- y=258 TOOLS header
--- y=278 Export
--- y=308 Clear All
+rowLabel(304, "Tracer:")
+optionGroup(304, 90, {"OFF", "ON"}, 1, 40, function(idx, _)
+	settings.showBeam = (idx == 2)
+end, "beam")
 
-sectionHeader(258, "TOOLS")
-local exportBtn = actionButton(278, "📋  EXPORT TO OUTPUT",    Color3.fromRGB(60, 100, 60))
-local clearBtn  = actionButton(308, "🗑  CLEAR ALL WAYPOINTS", C.BTN_DEL)
+-- ── LIMITS ──
+sectionHeader(330, "LIMITS")
 
--- ── Toggle settings panel ─────────────────────────────────
+rowLabel(350, "Max WPs:")
+optionGroup(350, 90, {"∞", "5", "10", "20"}, 1, 34, function(_, val)
+	settings.maxWaypoints = (val == "∞") and 0 or tonumber(val)
+end, "maxWp")
+
+-- ── UI SCALE ──
+sectionHeader(380, "INTERFACE")
+
+rowLabel(400, "UI Scale:")
+optionGroup(400, 90, {"0.8x", "1.0x", "1.2x"}, 2, 40, function(_, val)
+	local s = tonumber(val:sub(1, -2))
+	settings.uiScale = s
+	mainFrame.Size = UDim2.new(0, BASE_W * s, 0, BASE_H * s)
+	mainFrame.Position = UDim2.new(1, -(BASE_W * s) - 20, 0.5, -(BASE_H * s) / 2)
+end, "uiScale")
+
+-- ── TOOLS ──
+sectionHeader(430, "TOOLS")
+local exportBtn = actionButton(450, "📋  EXPORT TO OUTPUT", Color3.fromRGB(60, 100, 60))
+local clearBtn  = actionButton(480, "🗑  CLEAR ALL WAYPOINTS", C.BTN_DEL)
+
+-- Sync settings UI to current settings (call when opening panel)
+local function syncSettingsUI()
+	settingsControls.size( ({S=1,M=2,L=3})[settings.markerSize] )
+	settingsControls.shape( ({Cylinder=1,Sphere=2,Block=3})[settings.markerShape] )
+	local opIdx = settings.markerTransparency <= 0.25 and 1 or settings.markerTransparency <= 0.5 and 2 or 3
+	settingsControls.opacity(opIdx)
+	settingsControls.labels(settings.showLabels and 1 or 2)
+	settingsControls.sort( ({ORDER=1,DIST=2,NAME=3})[settings.sortMode] )
+	settingsControls.units(settings.distUnit == "Studs" and 1 or 2)
+	settingsControls.distMode(settings.distMode == "3D" and 1 or 2)
+	settingsControls.tpLift( ({[3]=1,[5]=2,[8]=3})[settings.tpHeight] )
+	settingsControls.tpStyle(settings.smoothTp and 2 or 1)
+	settingsControls.beam(settings.showBeam and 2 or 1)
+	settingsControls.maxWp( ({[0]=1,[5]=2,[10]=3,[20]=4})[settings.maxWaypoints] )
+	settingsControls.uiScale( ({[0.8]=1,[1]=2,[1.2]=3})[settings.uiScale] )
+	for i, cb in ipairs(colorBtns) do
+		cb.stroke.Color = (i == settings.markerColorIdx) and Color3.new(1,1,1) or Color3.fromRGB(80,80,80)
+	end
+end
+
+-- Toggle settings panel
 local settingsOpen = false
 local function toggleSettings()
-    settingsOpen             = not settingsOpen
-    settingsPanel.Visible    = settingsOpen
+	settingsOpen = not settingsOpen
+	settingsPanel.Visible = settingsOpen
+	if settingsOpen then
+		syncSettingsUI()
+	end
 end
 
 settingsBtn.MouseButton1Click:Connect(toggleSettings)
 doneBtn.MouseButton1Click:Connect(function()
-    settingsOpen          = false
-    settingsPanel.Visible = false
+	settingsOpen = false
+	settingsPanel.Visible = false
 end)
 
 -- ================================================================
 --  RUNTIME FUNCTIONS
 -- ================================================================
-local function setStatus(msg)
-    statusLabel.Text = msg
+function createMarker(wpData)
+	local part = Instance.new("Part")
+	part.Name         = "WaypointMarker"
+	part.Shape        = Enum.PartType[settings.markerShape]
+	part.Size         = MARKER_SIZES[settings.markerSize]
+	part.Anchored     = true
+	part.CanCollide   = false
+	part.Transparency = settings.markerTransparency
+	part.Color        = MARKER_COLORS[settings.markerColorIdx].color
+	part.Parent       = workspace
+	wpData.marker     = part
+
+	-- FIX: Lay cylinder flat on ground. Sphere/Block don't need rotation.
+	if settings.markerShape == "Cylinder" then
+		part.CFrame = CFrame.new(wpData.position + Vector3.new(0, 0.15, 0)) * CFrame.Angles(math.rad(90), 0, 0)
+	else
+		part.Position = wpData.position + Vector3.new(0, 0.15, 0)
+	end
+
+	local billboard = Instance.new("BillboardGui")
+	billboard.Adornee        = part
+	billboard.Size           = UDim2.new(0, 240, 0, 50)
+	billboard.StudsOffset    = Vector3.new(0, 4.5, 0)
+	billboard.AlwaysOnTop    = true
+	billboard.LightInfluence = 0
+	billboard.Enabled        = settings.showLabels
+	billboard.Parent         = part
+
+	local nameLabel = Instance.new("TextLabel")
+	nameLabel.Size                    = UDim2.new(1, 0, 1, 0)
+	nameLabel.BackgroundTransparency  = 1
+	nameLabel.Text                    = wpData.name
+	nameLabel.TextColor3              = Color3.new(1, 1, 1)
+	nameLabel.TextStrokeTransparency  = 0.2
+	nameLabel.TextStrokeColor3        = Color3.fromRGB(0, 0, 80)
+	nameLabel.TextSize                = 14
+	nameLabel.Font                    = Enum.Font.Legacy
+	nameLabel.Parent                  = billboard
 end
 
-local function createMarker(wpData)
-    local part = Instance.new("Part")
-    part.Name         = "WaypointMarker"
-    part.Shape        = Enum.PartType.Cylinder
-    part.Size         = MARKER_SIZES[settings.markerSize]
-    part.Position     = wpData.position + Vector3.new(0, 0.15, 0)
-    part.Anchored     = true
-    part.CanCollide   = false
-    part.Transparency = 0.35
-    part.Color        = MARKER_COLORS[settings.markerColorIdx].color
-    part.Parent       = workspace
-    wpData.marker     = part
-
-    local billboard = Instance.new("BillboardGui")
-    billboard.Adornee        = part
-    billboard.Size           = UDim2.new(0, 240, 0, 50)
-    billboard.StudsOffset    = Vector3.new(0, 4.5, 0)
-    billboard.AlwaysOnTop    = true
-    billboard.LightInfluence = 0
-    billboard.Enabled        = settings.showLabels
-    billboard.Parent         = part
-
-    local nameLabel = Instance.new("TextLabel")
-    nameLabel.Size                    = UDim2.new(1, 0, 1, 0)
-    nameLabel.BackgroundTransparency  = 1
-    nameLabel.Text                    = wpData.name
-    nameLabel.TextColor3              = Color3.new(1, 1, 1)
-    nameLabel.TextStrokeTransparency  = 0.2
-    nameLabel.TextStrokeColor3        = Color3.fromRGB(0, 0, 80)
-    nameLabel.TextScaled              = true
-    nameLabel.Font                    = Enum.Font.Legacy
-    nameLabel.Parent                  = billboard
-end
-
--- Assign the forward-declared refreshList
+-- ================================================================
+--  LIST RENDERER  (preserves scroll position)
+-- ================================================================
 refreshList = function()
-    for _, child in ipairs(listFrame:GetChildren()) do
-        if child:IsA("Frame") then child:Destroy() end
-    end
+	local scrollPos = listFrame.CanvasPosition
 
-    -- Build a sorted copy
-    local sorted = {}
-    for _, wp in ipairs(waypoints) do table.insert(sorted, wp) end
+	for _, child in ipairs(listFrame:GetChildren()) do
+		if child:IsA("Frame") then child:Destroy() end
+	end
 
-    if settings.sortMode == "NAME" then
-        table.sort(sorted, function(a, b) return a.name < b.name end)
-    elseif settings.sortMode == "DIST" and rootPart then
-        local pos = rootPart.Position
-        table.sort(sorted, function(a, b)
-            return (a.position - pos).Magnitude < (b.position - pos).Magnitude
-        end)
-    end
+	local sorted = table.create(#waypoints)
+	for _, wp in ipairs(waypoints) do table.insert(sorted, wp) end
 
-    for i, wp in ipairs(sorted) do
-        local isSel = (wp == selectedWaypoint)
-        local isAlt = (i % 2 == 0)
+	if settings.sortMode == "NAME" then
+		table.sort(sorted, function(a, b) return a.name:lower() < b.name:lower() end)
+	elseif settings.sortMode == "DIST" and rootPart then
+		local pos = rootPart.Position
+		table.sort(sorted, function(a, b)
+			return getDistToPlayer(a.position) < getDistToPlayer(b.position)
+		end)
+	end
 
-        local entry = Instance.new("Frame")
-        entry.Size             = UDim2.new(1, 0, 0, 24)
-        entry.BackgroundColor3 = isSel and C.SEL_BG or (isAlt and C.ROW_ALT or C.ROW_NORMAL)
-        entry.BorderSizePixel  = 0
-        entry.LayoutOrder      = i
-        entry.Parent           = listFrame
+	for i, wp in ipairs(sorted) do
+		local isSel = (wp == selectedWaypoint)
+		local isAlt = (i % 2 == 0)
 
-        local sep = Instance.new("Frame")
-        sep.Size             = UDim2.new(1, 0, 0, 1)
-        sep.Position         = UDim2.new(0, 0, 1, -1)
-        sep.BackgroundColor3 = Color3.fromRGB(210, 205, 195)
-        sep.BorderSizePixel  = 0
-        sep.Parent           = entry
+		local entry = Instance.new("Frame")
+		entry.Size             = UDim2.new(1, 0, 0, 26)
+		entry.BackgroundColor3 = isSel and C.SEL_BG or (isAlt and C.ROW_ALT or C.ROW_NORMAL)
+		entry.BorderSizePixel  = 0
+		entry.LayoutOrder      = i
+		entry.Parent           = listFrame
 
-        local icon = Instance.new("TextLabel")
-        icon.Size                = UDim2.new(0, 20, 1, 0)
-        icon.Position            = UDim2.new(0, 2, 0, 0)
-        icon.BackgroundTransparency = 1
-        icon.Text                = "📍"
-        icon.TextScaled          = true
-        icon.Font                = Enum.Font.Legacy
-        icon.Parent              = entry
+		local sep = Instance.new("Frame")
+		sep.Size             = UDim2.new(1, 0, 0, 1)
+		sep.Position         = UDim2.new(0, 0, 1, -1)
+		sep.BackgroundColor3 = Color3.fromRGB(210, 205, 195)
+		sep.BorderSizePixel  = 0
+		sep.Parent           = entry
 
-        local nLbl = Instance.new("TextLabel")
-        nLbl.Size               = UDim2.new(0.55, -24, 1, 0)
-        nLbl.Position           = UDim2.new(0, 24, 0, 0)
-        nLbl.BackgroundTransparency = 1
-        nLbl.Text               = wp.name
-        nLbl.TextColor3         = isSel and C.SEL_TEXT or C.TEXT_DARK
-        nLbl.TextXAlignment     = Enum.TextXAlignment.Left
-        nLbl.TextScaled         = true
-        nLbl.Font               = Enum.Font.Legacy
-        nLbl.Parent             = entry
+		local icon = Instance.new("TextLabel")
+		icon.Size                = UDim2.new(0, 22, 1, 0)
+		icon.Position            = UDim2.new(0, 2, 0, 0)
+		icon.BackgroundTransparency = 1
+		icon.Text                = "📍"
+		icon.TextSize            = 14
+		icon.Font                = Enum.Font.Legacy
+		icon.Parent              = entry
 
-        local dLbl = Instance.new("TextLabel")
-        dLbl.Name               = "DistanceLabel"
-        dLbl.Size               = UDim2.new(0.45, -6, 1, 0)
-        dLbl.Position           = UDim2.new(0.55, 0, 0, 0)
-        dLbl.BackgroundTransparency = 1
-        dLbl.Text               = "—"
-        dLbl.TextColor3         = isSel and C.SEL_TEXT or C.TEXT_MID
-        dLbl.TextXAlignment     = Enum.TextXAlignment.Right
-        dLbl.TextScaled         = true
-        dLbl.Font               = Enum.Font.Legacy
-        dLbl.Parent             = entry
+		local nLbl = Instance.new("TextLabel")
+		nLbl.Size               = UDim2.new(0.55, -26, 1, 0)
+		nLbl.Position           = UDim2.new(0, 26, 0, 0)
+		nLbl.BackgroundTransparency = 1
+		nLbl.Text               = wp.name
+		nLbl.TextColor3         = isSel and C.SEL_TEXT or C.TEXT_DARK
+		nLbl.TextXAlignment     = Enum.TextXAlignment.Left
+		nLbl.TextSize           = 13
+		nLbl.Font               = Enum.Font.Legacy
+		nLbl.Parent             = entry
 
-        local clickBtn = Instance.new("TextButton")
-        clickBtn.Size               = UDim2.new(1, 0, 1, 0)
-        clickBtn.BackgroundTransparency = 1
-        clickBtn.Text               = ""
-        clickBtn.ZIndex             = 2
-        clickBtn.Parent             = entry
-        clickBtn.MouseButton1Click:Connect(function()
-            selectedWaypoint = wp
-            setStatus("Selected: " .. wp.name)
-            refreshList()
-        end)
+		local dLbl = Instance.new("TextLabel")
+		dLbl.Name               = "DistanceLabel"
+		dLbl.Size               = UDim2.new(0.45, -6, 1, 0)
+		dLbl.Position           = UDim2.new(0.55, 0, 0, 0)
+		dLbl.BackgroundTransparency = 1
+		dLbl.Text               = "—"
+		dLbl.TextColor3         = isSel and C.SEL_TEXT or C.TEXT_MID
+		dLbl.TextXAlignment     = Enum.TextXAlignment.Right
+		dLbl.TextSize           = 13
+		dLbl.Font               = Enum.Font.Legacy
+		dLbl.Parent             = entry
 
-        wp.guiEntry = entry
-    end
+		local clickBtn = Instance.new("TextButton")
+		clickBtn.Size               = UDim2.new(1, 0, 1, 0)
+		clickBtn.BackgroundTransparency = 1
+		clickBtn.Text               = ""
+		clickBtn.ZIndex             = 2
+		clickBtn.Parent             = entry
 
-    if #waypoints == 0 then
-        setStatus("No waypoints. Press ADD to create one.")
-    elseif not selectedWaypoint then
-        setStatus(#waypoints .. " waypoint(s). Click one to select.")
-    end
+		-- Click to select, double-click to teleport
+		local lastClick = 0
+		clickBtn.MouseButton1Click:Connect(function()
+			local now = tick()
+			if now - lastClick < 0.4 and selectedWaypoint == wp then
+				teleportTo(wp)
+			else
+				selectedWaypoint = wp
+				setStatus("Selected: " .. wp.name)
+				refreshList()
+			end
+			lastClick = now
+		end)
+
+		wp.guiEntry = entry
+	end
+
+	countLabel.Text = tostring(#waypoints) .. (settings.maxWaypoints > 0 and ("/" .. settings.maxWaypoints) or "")
+
+	if #waypoints == 0 then
+		setStatus("No waypoints. Press ADD to create one.")
+	elseif not selectedWaypoint then
+		setStatus(#waypoints .. " waypoint(s). Click one to select.")
+	end
+
+	-- Restore scroll
+	task.defer(function()
+		listFrame.CanvasPosition = scrollPos
+	end)
 end
 
 -- ================================================================
---  LIVE DISTANCE UPDATER
+--  BEAM SYSTEM  (NEW)
 -- ================================================================
+local beamInst, beamAtt0, beamAtt1
+
+local function updateBeamColor()
+	if beamInst then
+		beamInst.Color = ColorSequence.new(MARKER_COLORS[settings.markerColorIdx].color)
+	end
+end
+
+local function updateBeam()
+	if not settings.showBeam or not selectedWaypoint or not selectedWaypoint.marker or not rootPart then
+		if beamInst then beamInst:Destroy() end
+		if beamAtt0 then beamAtt0:Destroy() end
+		if beamAtt1 then beamAtt1:Destroy() end
+		beamInst, beamAtt0, beamAtt1 = nil, nil, nil
+		return
+	end
+	if not beamInst or not beamInst.Parent then
+		beamAtt0 = Instance.new("Attachment")
+		beamAtt0.Name = "WPBeam0"
+		beamAtt0.Parent = rootPart
+		beamAtt1 = Instance.new("Attachment")
+		beamAtt1.Name = "WPBeam1"
+		beamAtt1.Parent = selectedWaypoint.marker
+		beamInst = Instance.new("Beam")
+		beamInst.Color = ColorSequence.new(MARKER_COLORS[settings.markerColorIdx].color)
+		beamInst.Width0 = 0.15
+		beamInst.Width1 = 0.15
+		beamInst.FaceCamera = true
+		beamInst.Segments = 10
+		beamInst.Parent = rootPart
+	end
+	beamInst.Attachment0 = beamAtt0
+	beamInst.Attachment1 = beamAtt1
+end
+
+-- ================================================================
+--  LIVE UPDATERS
+-- ================================================================
+local lastDistSort = 0
 RunService.Heartbeat:Connect(function()
-    if not rootPart then return end
-    local playerPos = rootPart.Position
-    for _, wp in ipairs(waypoints) do
-        if wp.guiEntry then
-            local d = wp.guiEntry:FindFirstChild("DistanceLabel")
-            if d then
-                local dist = math.floor((playerPos - wp.position).Magnitude + 0.5)
-                d.Text = formatDist(dist)
-            end
-        end
-    end
+	if not rootPart then return end
+	local playerPos = rootPart.Position
+
+	-- Update distance labels every frame
+	for _, wp in ipairs(waypoints) do
+		if wp.guiEntry then
+			local d = wp.guiEntry:FindFirstChild("DistanceLabel")
+			if d then
+				local dist = math.floor(getDistToPlayer(wp.position) + 0.5)
+				d.Text = formatDist(dist)
+			end
+		end
+	end
+
+	-- Re-sort by distance every 0.5s if needed
+	if settings.sortMode == "DIST" then
+		local now = tick()
+		if now - lastDistSort > 0.5 then
+			lastDistSort = now
+			refreshList()
+		end
+	end
+
+	-- Update tracer beam
+	updateBeam()
 end)
 
 -- ================================================================
---  ADD WAYPOINT
+--  ACTIONS
 -- ================================================================
-addButton.MouseButton1Click:Connect(function()
-    if not rootPart then return end
-    if settings.maxWaypoints > 0 and #waypoints >= settings.maxWaypoints then
-        setStatus("⚠ Limit reached! Max: " .. settings.maxWaypoints)
-        return
-    end
-    local newWP = {
-        name     = "Waypoint " .. (#waypoints + 1),
-        position = rootPart.Position,
-        marker   = nil,
-        guiEntry = nil,
-    }
-    table.insert(waypoints, newWP)
-    createMarker(newWP)
-    setStatus("Added: " .. newWP.name)
-    refreshList()
-end)
+local function addWaypoint()
+	if not rootPart then return end
+	if settings.maxWaypoints > 0 and #waypoints >= settings.maxWaypoints then
+		setStatus("⚠ Limit reached! Max: " .. settings.maxWaypoints)
+		return
+	end
+	local newWP = {
+		name     = "Waypoint " .. (#waypoints + 1),
+		position = rootPart.Position,
+		marker   = nil,
+		guiEntry = nil,
+	}
+	table.insert(waypoints, newWP)
+	createMarker(newWP)
+	setStatus("Added: " .. newWP.name)
+	refreshList()
+end
+
+local function teleportTo(wp)
+	if not wp or not rootPart then
+		setStatus("Select a waypoint to teleport!")
+		return
+	end
+	local target = wp.position + Vector3.new(0, settings.tpHeight, 0)
+	if settings.smoothTp then
+		local tween = TweenService:Create(rootPart, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			CFrame = CFrame.new(target)
+		})
+		tween:Play()
+	else
+		rootPart.CFrame = CFrame.new(target)
+	end
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	if humanoid then
+		humanoid:ChangeState(Enum.HumanoidStateType.RunningNoPhysics)
+	end
+	setStatus("Teleported to: " .. wp.name)
+end
 
 -- ================================================================
---  RENAME DIALOG  (retro modal)
+--  BUTTON CONNECTIONS
 -- ================================================================
+addButton.MouseButton1Click:Connect(addWaypoint)
+
 nameButton.MouseButton1Click:Connect(function()
-    if not selectedWaypoint then
-        setStatus("Select a waypoint first!")
-        return
-    end
+	if not selectedWaypoint then
+		setStatus("Select a waypoint first!")
+		return
+	end
 
-    local overlay = Instance.new("Frame")
-    overlay.Size                    = UDim2.new(1, 0, 1, 0)
-    overlay.BackgroundColor3        = Color3.new(0, 0, 0)
-    overlay.BackgroundTransparency  = 0.55
-    overlay.BorderSizePixel         = 0
-    overlay.ZIndex                  = 10
-    overlay.Parent                  = screenGui
+	local overlay = Instance.new("Frame")
+	overlay.Size                    = UDim2.new(1, 0, 1, 0)
+	overlay.BackgroundColor3        = Color3.new(0, 0, 0)
+	overlay.BackgroundTransparency  = 0.55
+	overlay.BorderSizePixel         = 0
+	overlay.ZIndex                  = 10
+	overlay.Parent                  = screenGui
 
-    local dialog = Instance.new("Frame")
-    dialog.Size             = UDim2.new(0, 280, 0, 140)
-    dialog.Position         = UDim2.new(0.5, -140, 0.5, -70)
-    dialog.BackgroundColor3 = C.BG
-    dialog.BorderSizePixel  = 0
-    dialog.ZIndex           = 11
-    dialog.Parent           = screenGui
-    applyRaisedBorder(dialog)
-    addBevelStrip(dialog, true)
-    addBevelStrip(dialog, false)
+	local dialog = Instance.new("Frame")
+	dialog.Size             = UDim2.new(0, 280, 0, 140)
+	dialog.Position         = UDim2.new(0.5, -140, 0.5, -70)
+	dialog.BackgroundColor3 = C.BG
+	dialog.BorderSizePixel  = 0
+	dialog.ZIndex           = 11
+	dialog.Parent           = screenGui
+	applyBorder(dialog, true)
 
-    local dTitle = Instance.new("Frame")
-    dTitle.Size             = UDim2.new(1, -8, 0, 22)
-    dTitle.Position         = UDim2.new(0, 4, 0, 4)
-    dTitle.BackgroundColor3 = C.TITLE_BG
-    dTitle.BorderSizePixel  = 0
-    dTitle.ZIndex           = 12
-    dTitle.Parent           = dialog
-    titleGradient(dTitle)
+	local dTitle = Instance.new("Frame")
+	dTitle.Size             = UDim2.new(1, -8, 0, 22)
+	dTitle.Position         = UDim2.new(0, 4, 0, 4)
+	dTitle.BackgroundColor3 = C.TITLE_BG
+	dTitle.BorderSizePixel  = 0
+	dTitle.ZIndex           = 12
+	dTitle.Parent           = dialog
+	titleGradient(dTitle)
 
-    local dTitleLbl = Instance.new("TextLabel")
-    dTitleLbl.Size                   = UDim2.new(1, -6, 1, 0)
-    dTitleLbl.Position               = UDim2.new(0, 6, 0, 0)
-    dTitleLbl.BackgroundTransparency = 1
-    dTitleLbl.Text                   = "✏  Rename Waypoint"
-    dTitleLbl.TextColor3             = Color3.new(1, 1, 1)
-    dTitleLbl.TextScaled             = true
-    dTitleLbl.Font                   = Enum.Font.Legacy
-    dTitleLbl.TextXAlignment         = Enum.TextXAlignment.Left
-    dTitleLbl.ZIndex                 = 13
-    dTitleLbl.Parent                 = dTitle
+	local dTitleLbl = Instance.new("TextLabel")
+	dTitleLbl.Size                   = UDim2.new(1, -6, 1, 0)
+	dTitleLbl.Position               = UDim2.new(0, 6, 0, 0)
+	dTitleLbl.BackgroundTransparency = 1
+	dTitleLbl.Text                   = "✏  Rename Waypoint"
+	dTitleLbl.TextColor3             = Color3.new(1, 1, 1)
+	dTitleLbl.TextSize               = 14
+	dTitleLbl.Font                   = Enum.Font.Legacy
+	dTitleLbl.TextXAlignment         = Enum.TextXAlignment.Left
+	dTitleLbl.ZIndex                 = 13
+	dTitleLbl.Parent                 = dTitle
 
-    local promptLbl = Instance.new("TextLabel")
-    promptLbl.Size               = UDim2.new(1, -12, 0, 20)
-    promptLbl.Position           = UDim2.new(0, 6, 0, 32)
-    promptLbl.BackgroundTransparency = 1
-    promptLbl.Text               = "Enter new name:"
-    promptLbl.TextColor3         = C.TEXT_DARK
-    promptLbl.TextScaled         = true
-    promptLbl.Font               = Enum.Font.Legacy
-    promptLbl.TextXAlignment     = Enum.TextXAlignment.Left
-    promptLbl.ZIndex             = 12
-    promptLbl.Parent             = dialog
+	local promptLbl = Instance.new("TextLabel")
+	promptLbl.Size               = UDim2.new(1, -12, 0, 20)
+	promptLbl.Position           = UDim2.new(0, 6, 0, 32)
+	promptLbl.BackgroundTransparency = 1
+	promptLbl.Text               = "Enter new name:"
+	promptLbl.TextColor3         = C.TEXT_DARK
+	promptLbl.TextSize           = 13
+	promptLbl.Font               = Enum.Font.Legacy
+	promptLbl.TextXAlignment     = Enum.TextXAlignment.Left
+	promptLbl.ZIndex             = 12
+	promptLbl.Parent             = dialog
 
-    local textBox = Instance.new("TextBox")
-    textBox.Size             = UDim2.new(1, -12, 0, 26)
-    textBox.Position         = UDim2.new(0, 6, 0, 56)
-    textBox.BackgroundColor3 = Color3.new(1, 1, 1)
-    textBox.Text             = selectedWaypoint.name
-    textBox.ClearTextOnFocus = false   -- BUG FIX: was true (cleared the name on click)
-    textBox.PlaceholderText  = "Enter name..."
-    textBox.TextScaled       = true
-    textBox.Font             = Enum.Font.Legacy
-    textBox.TextColor3       = C.TEXT_DARK
-    textBox.ZIndex           = 12
-    textBox.Parent           = dialog
-    applyRaisedBorder(textBox)
+	local textBox = Instance.new("TextBox")
+	textBox.Size             = UDim2.new(1, -12, 0, 26)
+	textBox.Position         = UDim2.new(0, 6, 0, 56)
+	textBox.BackgroundColor3 = Color3.new(1, 1, 1)
+	textBox.Text             = selectedWaypoint.name
+	textBox.ClearTextOnFocus = false
+	textBox.PlaceholderText  = "Enter name..."
+	textBox.TextSize         = 14
+	textBox.Font             = Enum.Font.Legacy
+	textBox.TextColor3       = C.TEXT_DARK
+	textBox.ZIndex           = 12
+	textBox.Parent           = dialog
+	applyBorder(textBox, false)
 
-    local okBtn = Instance.new("TextButton")
-    okBtn.Size             = UDim2.new(0, 80, 0, 26)
-    okBtn.Position         = UDim2.new(0.5, -86, 0, 100)
-    okBtn.BackgroundColor3 = C.BTN_FACE
-    okBtn.Text             = "OK"
-    okBtn.TextColor3       = C.TEXT_DARK
-    okBtn.TextScaled       = true
-    okBtn.Font             = Enum.Font.Legacy
-    okBtn.BorderSizePixel  = 0
-    okBtn.ZIndex           = 12
-    okBtn.Parent           = dialog
-    applyRaisedBorder(okBtn)
+	local okBtn = Instance.new("TextButton")
+	okBtn.Size             = UDim2.new(0, 80, 0, 26)
+	okBtn.Position         = UDim2.new(0.5, -86, 0, 100)
+	okBtn.BackgroundColor3 = C.BTN_FACE
+	okBtn.Text             = "OK"
+	okBtn.TextColor3       = C.TEXT_DARK
+	okBtn.TextSize         = 13
+	okBtn.Font             = Enum.Font.Legacy
+	okBtn.BorderSizePixel  = 0
+	okBtn.ZIndex           = 12
+	okBtn.Parent           = dialog
+	applyBorder(okBtn, true)
 
-    local cancelBtn = Instance.new("TextButton")
-    cancelBtn.Size             = UDim2.new(0, 80, 0, 26)
-    cancelBtn.Position         = UDim2.new(0.5, 6, 0, 100)
-    cancelBtn.BackgroundColor3 = C.BTN_FACE
-    cancelBtn.Text             = "Cancel"
-    cancelBtn.TextColor3       = C.TEXT_DARK
-    cancelBtn.TextScaled       = true
-    cancelBtn.Font             = Enum.Font.Legacy
-    cancelBtn.BorderSizePixel  = 0
-    cancelBtn.ZIndex           = 12
-    cancelBtn.Parent           = dialog
-    applyRaisedBorder(cancelBtn)
+	local cancelBtn = Instance.new("TextButton")
+	cancelBtn.Size             = UDim2.new(0, 80, 0, 26)
+	cancelBtn.Position         = UDim2.new(0.5, 6, 0, 100)
+	cancelBtn.BackgroundColor3 = C.BTN_FACE
+	cancelBtn.Text             = "Cancel"
+	cancelBtn.TextColor3       = C.TEXT_DARK
+	cancelBtn.TextSize         = 13
+	cancelBtn.Font             = Enum.Font.Legacy
+	cancelBtn.BorderSizePixel  = 0
+	cancelBtn.ZIndex           = 12
+	cancelBtn.Parent           = dialog
+	applyBorder(cancelBtn, true)
 
-    local function closeDialog()
-        overlay:Destroy()
-        dialog:Destroy()
-    end
+	local function closeDialog()
+		overlay:Destroy()
+		dialog:Destroy()
+	end
 
-    local function confirmRename()
-        local newName = textBox.Text:match("^%s*(.-)%s*$") or ""
-        if newName ~= "" then
-            selectedWaypoint.name = newName
-            if selectedWaypoint.marker then
-                local bb = selectedWaypoint.marker:FindFirstChildOfClass("BillboardGui")
-                if bb then
-                    local lbl = bb:FindFirstChildOfClass("TextLabel")
-                    if lbl then lbl.Text = newName end
-                end
-            end
-            setStatus("Renamed to: " .. newName)
-            refreshList()
-        end
-        closeDialog()
-    end
+	local function confirmRename()
+		local newName = textBox.Text:match("^%s*(.-)%s*$") or ""
+		if newName ~= "" then
+			selectedWaypoint.name = newName
+			if selectedWaypoint.marker then
+				local bb = selectedWaypoint.marker:FindFirstChildOfClass("BillboardGui")
+				if bb then
+					local lbl = bb:FindFirstChildOfClass("TextLabel")
+					if lbl then lbl.Text = newName end
+				end
+			end
+			setStatus("Renamed to: " .. newName)
+			refreshList()
+		end
+		closeDialog()
+	end
 
-    okBtn.MouseButton1Click:Connect(confirmRename)
-    cancelBtn.MouseButton1Click:Connect(closeDialog)
+	okBtn.MouseButton1Click:Connect(confirmRename)
+	cancelBtn.MouseButton1Click:Connect(closeDialog)
+	textBox.FocusLost:Connect(function(enterPressed)
+		if enterPressed then confirmRename() end
+	end)
 
-    -- BUG FIX: Enter key now fires OK correctly
-    textBox.FocusLost:Connect(function(enterPressed)
-        if enterPressed then confirmRename() end
-    end)
-
-    textBox:CaptureFocus()
+	textBox:CaptureFocus()
 end)
 
--- ================================================================
---  TELEPORT
--- ================================================================
 teleportButton.MouseButton1Click:Connect(function()
-    if not selectedWaypoint or not rootPart then
-        setStatus("Select a waypoint to teleport!")
-        return
-    end
-    rootPart.CFrame = CFrame.new(selectedWaypoint.position + Vector3.new(0, settings.tpHeight, 0))
-    local humanoid = character:FindFirstChildOfClass("Humanoid")
-    if humanoid then
-        humanoid:ChangeState(Enum.HumanoidStateType.RunningNoPhysics)
-    end
-    setStatus("Teleported to: " .. selectedWaypoint.name)
+	teleportTo(selectedWaypoint)
 end)
 
--- ================================================================
---  DELETE
--- ================================================================
 deleteButton.MouseButton1Click:Connect(function()
-    if not selectedWaypoint then
-        setStatus("Select a waypoint to delete!")
-        return
-    end
-    local deletedName = selectedWaypoint.name
-    if selectedWaypoint.marker then
-        selectedWaypoint.marker:Destroy()
-    end
-    for i, wp in ipairs(waypoints) do
-        if wp == selectedWaypoint then
-            table.remove(waypoints, i)
-            break
-        end
-    end
-    selectedWaypoint = nil
-    setStatus("Deleted: " .. deletedName)
-    refreshList()
+	if not selectedWaypoint then
+		setStatus("Select a waypoint to delete!")
+		return
+	end
+	local deletedName = selectedWaypoint.name
+	if selectedWaypoint.marker then
+		selectedWaypoint.marker:Destroy()
+	end
+	for i, wp in ipairs(waypoints) do
+		if wp == selectedWaypoint then
+			table.remove(waypoints, i)
+			break
+		end
+	end
+	selectedWaypoint = nil
+	setStatus("Deleted: " .. deletedName)
+	refreshList()
 end)
 
 -- ================================================================
 --  SETTINGS: EXPORT & CLEAR ALL
 -- ================================================================
 exportBtn.MouseButton1Click:Connect(function()
-    if #waypoints == 0 then
-        setStatus("No waypoints to export.")
-        return
-    end
-    print("=== WAYPOINTS EXPORT (" .. #waypoints .. ") ===")
-    for i, wp in ipairs(waypoints) do
-        print(string.format("  %d.  %-20s  (%.1f, %.1f, %.1f)",
-            i, wp.name, wp.position.X, wp.position.Y, wp.position.Z))
-    end
-    print("==============================================")
-    setStatus("Exported " .. #waypoints .. " waypoints → Output window.")
+	if #waypoints == 0 then
+		setStatus("No waypoints to export.")
+		return
+	end
+	print("=== WAYPOINTS EXPORT (" .. #waypoints .. ") ===")
+	for i, wp in ipairs(waypoints) do
+		print(string.format("  %d.  %-20s  (%.2f, %.2f, %.2f)",
+			i, wp.name, wp.position.X, wp.position.Y, wp.position.Z))
+	end
+	print("==============================================")
+	setStatus("Exported " .. #waypoints .. " waypoints → Output window.")
 end)
 
 clearBtn.MouseButton1Click:Connect(function()
-    for _, wp in ipairs(waypoints) do
-        if wp.marker then wp.marker:Destroy() end
-    end
-    waypoints           = {}
-    selectedWaypoint    = nil
-    settingsOpen        = false
-    settingsPanel.Visible = false
-    setStatus("All waypoints cleared.")
-    refreshList()
+	-- NEW: Confirmation dialog
+	local overlay = Instance.new("Frame")
+	overlay.Size = UDim2.new(1,0,1,0)
+	overlay.BackgroundColor3 = Color3.new(0,0,0)
+	overlay.BackgroundTransparency = 0.55
+	overlay.ZIndex = 30
+	overlay.Parent = screenGui
+
+	local dialog = Instance.new("Frame")
+	dialog.Size = UDim2.new(0, 260, 0, 110)
+	dialog.Position = UDim2.new(0.5, -130, 0.5, -55)
+	dialog.BackgroundColor3 = C.BG
+	dialog.ZIndex = 31
+	dialog.Parent = screenGui
+	applyBorder(dialog, true)
+
+	local t = Instance.new("Frame")
+	t.Size = UDim2.new(1,-8,0,20); t.Position = UDim2.new(0,4,0,4)
+	t.BackgroundColor3 = C.TITLE_BG; t.ZIndex = 32; t.Parent = dialog
+	titleGradient(t)
+	local tl = Instance.new("TextLabel")
+	tl.Size = UDim2.new(1,-6,1,0); tl.Position = UDim2.new(0,6,0,0)
+	tl.BackgroundTransparency = 1; tl.Text = "⚠  Confirm Clear"
+	tl.TextColor3 = Color3.new(1,1,1); tl.TextSize = 13
+	tl.Font = Enum.Font.Legacy; tl.TextXAlignment = Enum.TextXAlignment.Left
+	tl.ZIndex = 33; tl.Parent = t
+
+	local q = Instance.new("TextLabel")
+	q.Size = UDim2.new(1,-12,0,30); q.Position = UDim2.new(0,6,0,30)
+	q.BackgroundTransparency = 1; q.Text = "Delete ALL waypoints?\nThis cannot be undone."
+	q.TextColor3 = C.TEXT_DARK; q.TextSize = 13; q.Font = Enum.Font.Legacy
+	q.TextXAlignment = Enum.TextXAlignment.Left; q.ZIndex = 32; q.Parent = dialog
+
+	local yes = Instance.new("TextButton")
+	yes.Size = UDim2.new(0,70,0,24); yes.Position = UDim2.new(0.5,-76,0,76)
+	yes.BackgroundColor3 = C.BTN_DEL; yes.Text = "YES"
+	yes.TextColor3 = Color3.new(1,1,1); yes.TextSize = 13
+	yes.Font = Enum.Font.Legacy; yes.ZIndex = 32; yes.Parent = dialog
+	applyBorder(yes, true); retroHover(yes, C.BTN_DEL)
+
+	local no = Instance.new("TextButton")
+	no.Size = UDim2.new(0,70,0,24); no.Position = UDim2.new(0.5,6,0,76)
+	no.BackgroundColor3 = C.BTN_FACE; no.Text = "NO"
+	no.TextColor3 = C.TEXT_DARK; no.TextSize = 13
+	no.Font = Enum.Font.Legacy; no.ZIndex = 32; no.Parent = dialog
+	applyBorder(no, true); retroHover(no, C.BTN_FACE)
+
+	yes.MouseButton1Click:Connect(function()
+		for _, wp in ipairs(waypoints) do
+			if wp.marker then wp.marker:Destroy() end
+		end
+		waypoints = {}
+		selectedWaypoint = nil
+		settingsOpen = false
+		settingsPanel.Visible = false
+		setStatus("All waypoints cleared.")
+		refreshList()
+		overlay:Destroy(); dialog:Destroy()
+	end)
+	no.MouseButton1Click:Connect(function()
+		overlay:Destroy(); dialog:Destroy()
+	end)
+end)
+
+-- ================================================================
+--  KEYBINDS  (NEW)
+-- ================================================================
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+	if gameProcessed then return end
+	if input.KeyCode == Enum.KeyCode.Insert then
+		mainFrame.Visible = not mainFrame.Visible
+	elseif input.KeyCode == Enum.KeyCode.P and UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
+		addWaypoint()
+	end
 end)
 
 -- ================================================================
 --  INITIAL RENDER
 -- ================================================================
 refreshList()
-print("[WaypointSystem v4] Loaded — Settings panel active.")
+print("[WaypointSystem v5] Loaded — Press Insert to toggle UI, Ctrl+P to quick-add.")
